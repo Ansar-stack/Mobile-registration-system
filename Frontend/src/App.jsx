@@ -4,10 +4,11 @@ import { ProtectedRoute, PublicRoute } from './component/RouteGaurd';
 import AuthLayout from './layouts/AuthLayout';
 import MainLayout from './layouts/MainLayout';
 import { routes } from './routes';
+import { PageLoader } from './component/Loader';
 
 const App = () => {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="h-8 w-8 rounded-full border-4 border-primary/20 border-t-primary animate-spin" /></div>}>
       <Routes>
         {/* Public Routes */}
         <Route element={<PublicRoute />}>

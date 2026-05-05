@@ -1,6 +1,7 @@
 import axios from 'axios';
+import i18n from '../i18n';
 
-const API_BASE_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +9,12 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Attach current language as Accept-Language on every request
+api.interceptors.request.use((config) => {
+  config.headers['Accept-Language'] = i18n.language || 'en';
+  return config;
 });
 
 // Response interceptor for handling common errors

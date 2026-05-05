@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { authService } from '../../services';
 import { Button } from '../../component/ui/button';
 import { Input } from '../../component/ui/input';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const token = searchParams.get('token');
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
@@ -24,6 +25,7 @@ const ResetPassword = () => {
     try {
       await authService.resetPassword(data.password, token);
       toast.success('Password reset successful. You can now login.');
+      navigate('/login');
     } catch (error) {
       toast.error(error.message || 'Failed to reset password');
     } finally {

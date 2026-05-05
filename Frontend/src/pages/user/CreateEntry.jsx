@@ -1,44 +1,402 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { mobileService, customerService, transactionService } from '../../services';
 import { Button } from '../../component/ui/button';
 import { Input } from '../../component/ui/input';
 import { Label } from '../../component/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../../component/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../component/ui/select';
 import { Textarea } from '../../component/ui/texterea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../component/ui/table';
-import { Loader2, Plus, Pencil, Trash2, Smartphone as SmartphoneIcon, Users as UsersIcon, ArrowLeftRight as ArrowLeftRightIcon } from 'lucide-react';
+import { Loader2, Smartphone, ArrowLeftRight, Users, Check, ChevronRight, ChevronLeft, ShoppingCart, Tag, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
+import { ProvinceInput, DistrictInput } from '../../component/ui/ProvinceInput';
 import { formatDistanceToNow } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
-// Icon wrappers
-const Smartphone = ({ className }) => <SmartphoneIcon className={className} />;
-const Users = ({ className }) => <UsersIcon className={className} />;
-const ArrowLeftRight = ({ className }) => <ArrowLeftRightIcon className={className} />;
+// ─── Stepper ──────────────────────────────────────────────────────────────────
 
-const CreateEntry = () => {
+function Stepper({ current }) {
+  const { t } = useTranslation();
+  const STEPS = [
+    { id: 1, label: t('entry.stepMobile'),      icon: Smartphone },
+    { id: 2, label: t('entry.stepTransaction'), icon: ArrowLeftRight },
+    { id: 3, label: t('entry.stepCustomer'),    icon: Users },
+  ];
+
+  return (
+    <div className="flex items-center justify-center mb-8">
+      {STEPS.map((step, i) => {
+        const Icon = step.icon;
+        const done = current > step.id;
+        const active = current === step.id;
+        return (
+          <div key={step.id} className="flex items-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className={cn(
+                'w-11 h-11 rounded-full flex items-center justify-center border-2 transition-all duration-200 font-semibold text-sm',
+                done   && 'bg-primary border-primary text-primary-foreground',
+                active && 'border-primary text-primary bg-primary/10 shadow-sm',
+                !done && !active && 'border-border text-muted-foreground bg-muted/40',
+              )}>
+                {done ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+              </div>
+              <span className={cn(
+                'text-xs font-semibold tracking-wide',
+                active ? 'text-primary' : done ? 'text-primary/60' : 'text-muted-foreground',
+              )}>{step.label}</span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={cn(
+                'w-8 sm:w-20 h-0.5 mx-1 sm:mx-2 mb-5 rounded-full transition-all duration-300',
+                current > step.id ? 'bg-primary' : 'bg-border',
+              )} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Field ────────────────────────────────────────────────────────────────────
+
+function Field({ label, error, children, className }) {
+  return (
+    <div className={cn('space-y-1.5', className)}>
+      {label && <Label className="text-sm font-medium text-foreground/80">{label}</Label>}
+      {children}
+      {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+    </div>
+  );
+}
+
+// ─── Step 1: Mobile ───────────────────────────────────────────────────────────
+
+function StepMobile({ form, onNext }) {
+  const { t } = useTranslation();
+  const { register, handleSubmit, formState: { errors } } = form;
+  const firstRef = useRef(null);
+  useEffect(() => { firstRef.current?.focus(); }, []);
+  const numOnly = (e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); };
+
+  return (
+    <form onSubmit={handleSubmit(onNext)} className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label={t('entry.imei1')} error={errors.imei1?.message}>
+          <Input
+            ref={firstRef}
+            {...register('imei1', {
+              required: t('entry.imei1Required'),
+              pattern: { value: /^\d{15}$/, message: t('entry.imeiPattern') },
+            })}
+            inputMode="numeric" maxLength={15} placeholder={t('entry.imei1Placeholder')}
+            onKeyPress={numOnly}
+            className={cn('h-12 text-base tracking-widest font-mono', errors.imei1 && 'border-destructive focus-visible:ring-destructive')}
+          />
+        </Field>
+        <Field label={t('entry.imei2')} error={errors.imei2?.message}>
+          <Input
+            {...register('imei2', {
+              pattern: { value: /^\d{15}$/, message: t('entry.imeiPattern') },
+            })}
+            inputMode="numeric" maxLength={15} placeholder={t('entry.imei2Placeholder')}
+            onKeyPress={numOnly}
+            className={cn('h-12 text-base tracking-widest font-mono', errors.imei2 && 'border-destructive focus-visible:ring-destructive')}
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label={t('entry.brand')} error={errors.brand?.message}>
+          <Input
+            {...register('brand', { required: t('entry.brandRequired'), minLength: { value: 2, message: t('entry.brandMin') } })}
+            placeholder={t('entry.brandPlaceholder')}
+            className={cn('h-11', errors.brand && 'border-destructive')}
+          />
+        </Field>
+        <Field label={t('entry.model')} error={errors.model?.message}>
+          <Input
+            {...register('model', { required: t('entry.modelRequired'), minLength: { value: 1, message: t('entry.modelRequired') } })}
+            placeholder={t('entry.modelPlaceholder')}
+            className={cn('h-11', errors.model && 'border-destructive')}
+          />
+        </Field>
+        <Field label={t('entry.color')} error={errors.color?.message}>
+          <Input
+            {...register('color', { required: t('entry.colorRequired') })}
+            placeholder={t('entry.colorPlaceholder')}
+            className={cn('h-11', errors.color && 'border-destructive')}
+          />
+        </Field>
+        <Field label={t('entry.ram')} error={errors.ram?.message}>
+          <Input
+            {...register('ram', { min: { value: 1, message: 'RAM must be at least 1 GB' }, max: { value: 256, message: 'RAM value seems too high' } })}
+            type="number" inputMode="numeric" min="1" max="256" placeholder={t('entry.ramPlaceholder')}
+            className={cn('h-11', errors.ram && 'border-destructive')}
+          />
+        </Field>
+        <Field label={t('entry.storage')} error={errors.storage?.message}>
+          <Input
+            {...register('storage', { min: { value: 1, message: 'Storage must be at least 1 GB' }, max: { value: 4096, message: 'Storage value seems too high' } })}
+            type="number" inputMode="numeric" min="1" max="4096" placeholder={t('entry.storagePlaceholder')}
+            className={cn('h-11', errors.storage && 'border-destructive')}
+          />
+        </Field>
+      </div>
+
+      <div className="flex justify-end pt-1">
+        <Button type="submit" size="lg" className="gap-2 px-10 h-11">
+          {t('entry.next')} <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Step 2: Transaction ──────────────────────────────────────────────────────
+
+function StepTransaction({ form, onNext, onBack }) {
+  const { t } = useTranslation();
+  const { watch, setValue, register, formState: { errors } } = form;
+  const selected = watch('transactionType') || 'BUY';
+
+  const TX_TYPES = [
+    { value: 'BUY',    label: t('entry.buy'),    desc: t('entry.buyDesc'),    icon: ShoppingCart,
+      idle: 'bg-green-50 border-green-200 hover:border-green-400 hover:bg-green-100/60',
+      active: 'bg-green-100 border-green-500 ring-2 ring-green-200', color: 'text-green-700' },
+    { value: 'SELL',   label: t('entry.sell'),   desc: t('entry.sellDesc'),   icon: Tag,
+      idle: 'bg-blue-50 border-blue-200 hover:border-blue-400 hover:bg-blue-100/60',
+      active: 'bg-blue-100 border-blue-500 ring-2 ring-blue-200', color: 'text-blue-700' },
+    { value: 'UNLOCK', label: t('entry.unlock'), desc: t('entry.unlockDesc'), icon: Unlock,
+      idle: 'bg-purple-50 border-purple-200 hover:border-purple-400 hover:bg-purple-100/60',
+      active: 'bg-purple-100 border-purple-500 ring-2 ring-purple-200', color: 'text-purple-700' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {TX_TYPES.map(({ value, label, desc, icon: Icon, idle, active, color }) => {
+          const isActive = selected === value;
+          return (
+            <button
+              key={value} type="button"
+              onClick={() => setValue('transactionType', value)}
+              className={cn(
+                'flex sm:flex-col items-center sm:items-center gap-3 sm:gap-3 p-4 sm:p-5 rounded-xl border-2 transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring text-left sm:text-center',
+                isActive ? active : idle,
+              )}
+            >
+              <Icon className={cn('w-6 h-6 sm:w-7 sm:h-7 shrink-0', color)} />
+              <div className="flex-1 sm:flex-none sm:text-center">
+                <p className={cn('font-bold text-sm', color)}>{label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{desc}</p>
+              </div>
+              <div className={cn('w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0', isActive ? `border-current ${color}` : 'border-border')}>
+                {isActive && <div className="w-2.5 h-2.5 rounded-full bg-current" />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label={t('entry.price')} error={errors.price?.message}>
+          <Input
+            {...register('price', {
+              min: { value: 0, message: 'Price cannot be negative' },
+              max: { value: 10000000, message: 'Price seems too high' },
+            })}
+            type="number" inputMode="decimal" min="0" step="0.01" placeholder={t('entry.pricePlaceholder')}
+            className={cn('h-11 text-base', errors.price && 'border-destructive')}
+          />
+        </Field>
+        <Field label={t('entry.notes')}>
+          <Textarea
+            {...register('notes', { maxLength: { value: 500, message: 'Notes cannot exceed 500 characters' } })}
+            placeholder={t('entry.notesPaceholder')}
+            className="resize-none min-h-[44px]"
+            rows={2}
+          />
+        </Field>
+      </div>
+
+      <div className="flex justify-between pt-1">
+        <Button type="button" variant="outline" size="lg" onClick={onBack} className="gap-2 px-8 h-11">
+          <ChevronLeft className="w-4 h-4" /> {t('common.back')}
+        </Button>
+        <Button type="button" size="lg" onClick={onNext} className="gap-2 px-10 h-11">
+          {t('entry.next')} <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 3: Customer ─────────────────────────────────────────────────────────
+
+function StepCustomer({ form, onBack, onSubmit, isLoading }) {
+  const { t } = useTranslation();
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
+  const isSell = watch('transactionType') === 'SELL';
+  const hasCurrentAddress = watch('hasCurrentAddress');
+  const firstRef = useRef(null);
+  useEffect(() => { firstRef.current?.focus(); }, []);
+
+  const req = (msg) => isSell ? false : msg;
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {isSell && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-700">
+          <Tag className="w-4 h-4 shrink-0" />
+          <span><strong>{t('entry.sell')}</strong> {t('entry.sellNotice')}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label={isSell ? t('entry.firstName') : t('entry.firstNameRequired')} error={errors.firstName?.message}>
+          <Input
+            ref={firstRef}
+            {...register('firstName', {
+              required: req(t('entry.firstNameReq')),
+              minLength: { value: 2, message: t('entry.firstNameMin') },
+              pattern: { value: /^[A-Za-z\s'-]+$/, message: t('entry.firstNamePattern') },
+            })}
+            className={cn('h-11', errors.firstName && 'border-destructive')}
+            placeholder="e.g. Ahmad"
+          />
+        </Field>
+        <Field label={isSell ? t('entry.lastName') : t('entry.lastNameRequired')} error={errors.lastName?.message}>
+          <Input
+            {...register('lastName', {
+              required: req(t('entry.lastNameReq')),
+              minLength: { value: 2, message: t('entry.lastNameMin') },
+              pattern: { value: /^[A-Za-z\s'-]+$/, message: t('entry.lastNamePattern') },
+            })}
+            className={cn('h-11', errors.lastName && 'border-destructive')}
+            placeholder="e.g. Khan"
+          />
+        </Field>
+
+        <Field label={isSell ? t('entry.gender') : t('entry.genderRequired')}>
+          <Select onValueChange={(v) => setValue('gender', v)} defaultValue="male">
+            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">{t('entry.male')}</SelectItem>
+              <SelectItem value="female">{t('entry.female')}</SelectItem>
+              <SelectItem value="other">{t('entry.other')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <Field label={isSell ? t('entry.phone') : t('entry.phoneRequired')} error={errors.phoneNumber?.message}>
+          <Input
+            {...register('phoneNumber', {
+              required: req(t('entry.phoneReq')),
+              pattern: { value: /^[+]?[0-9\s\-()]{7,15}$/, message: t('entry.phonePattern') },
+            })}
+            type="tel" inputMode="tel"
+            className={cn('h-11', errors.phoneNumber && 'border-destructive')}
+            placeholder={t('entry.phonePlaceholder')}
+          />
+        </Field>
+
+        <Field label={isSell ? t('entry.idCard') : t('entry.idCardRequired')} error={errors.idCardNumber?.message}>
+          <Input
+            {...register('idCardNumber', {
+              required: req(t('entry.idCardReq')),
+              minLength: { value: 5, message: t('entry.idCardMin') },
+            })}
+            className={cn('h-11', errors.idCardNumber && 'border-destructive')}
+            placeholder={t('entry.idCardPlaceholder')}
+          />
+        </Field>
+
+        <Field label={t('entry.idImage')}>
+          <Input type="file" {...register('idImage')} accept="image/*" className="h-11" />
+        </Field>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">{isSell ? t('entry.permanentAddressOptional') : t('entry.permanentAddress')}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <ProvinceInput
+            value={watch('p_province') || ''}
+            onChange={(v) => { setValue('p_province', v); setValue('p_district', ''); }}
+            placeholder={t('entry.province')}
+            hasError={!!errors.p_province}
+          />
+          <Input {...register('p_city', { required: !isSell })} placeholder={t('entry.city')}
+            className={cn('h-10', errors.p_city && 'border-destructive')} />
+          <DistrictInput
+            value={watch('p_district') || ''}
+            onChange={(v) => setValue('p_district', v)}
+            province={watch('p_province') || ''}
+            placeholder={t('entry.district')}
+            hasError={!!errors.p_district}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 cursor-pointer w-fit">
+          <input type="checkbox" {...register('hasCurrentAddress')} className="w-4 h-4 rounded border-border accent-primary" />
+          <span className="text-sm font-semibold">{t('entry.currentAddressToggle')}</span>
+        </label>
+        {hasCurrentAddress && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <ProvinceInput
+              value={watch('c_province') || ''}
+              onChange={(v) => { setValue('c_province', v); setValue('c_district', ''); }}
+              placeholder={t('entry.province')}
+              hasError={!!errors.c_province}
+            />
+            <Input {...register('c_city', { required: !!hasCurrentAddress })} placeholder={t('entry.city')}
+              className={cn('h-10', errors.c_city && 'border-destructive')} />
+            <DistrictInput
+              value={watch('c_district') || ''}
+              onChange={(v) => setValue('c_district', v)}
+              province={watch('c_province') || ''}
+              placeholder={t('entry.district')}
+              hasError={!!errors.c_district}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-between pt-1">
+        <Button type="button" variant="outline" size="lg" onClick={onBack} className="gap-2 px-8 h-11">
+          <ChevronLeft className="w-4 h-4" /> {t('common.back')}
+        </Button>
+        <Button type="submit" size="lg" className="gap-2 px-10 h-11" disabled={isLoading}>
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          {t('entry.submitEntry')}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function CreateEntry() {
+  const { t } = useTranslation();
+  const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [recentEntries, setRecentEntries] = useState([]);
   const [isFetchingEntries, setIsFetchingEntries] = useState(true);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
-    defaultValues: {
-      transactionType: 'BUY',
-      gender: 'MALE',
-    }
-  });
+  const form = useForm({ defaultValues: { transactionType: 'BUY', gender: 'male' } });
 
   const fetchRecentEntries = async () => {
     setIsFetchingEntries(true);
     try {
-      // For demo, we might need a specific "my recent entries" endpoint or filter
-      const response = await transactionService.getAll({ limit: 5, sort: 'createdAt:desc' });
-      console.log(response)
-      // setRecentEntries(response.data.data?.items || response.data.data || []);
-    } catch (error) {
-      console.error('Failed to fetch recent entries:', error);
+      const res = await transactionService.getAll({ limit: 5, sort: 'createdAt:desc' });
+      const raw = res?.data?.data;
+      setRecentEntries(Array.isArray(raw?.transactions) ? raw.transactions : Array.isArray(raw?.items) ? raw.items : []);
+    } catch {
+      setRecentEntries([]);
     } finally {
       setIsFetchingEntries(false);
     }
@@ -46,335 +404,130 @@ const CreateEntry = () => {
 
   useEffect(() => {
     fetchRecentEntries();
-    const interval = setInterval(fetchRecentEntries, 60000); // Refresh every minute
-    return () => clearInterval(interval);
+    const id = setInterval(fetchRecentEntries, 60000);
+    return () => clearInterval(id);
   }, []);
 
-  const onSubmit = async (data) => {
+  const handleFinalSubmit = async (data) => {
     setIsLoading(true);
+    let customerId = null;
     try {
-      // 1. Create Mobile
-      const mobileRes = await mobileService.create({
+      const isSell = data.transactionType === 'SELL';
+      const hasCustomerData = !!(data.firstName?.trim() || data.phoneNumber?.trim() || data.idCardNumber?.trim());
+
+      if (!isSell || hasCustomerData) {
+        const fd = new FormData();
+        fd.append('firstName', data.firstName || '');
+        fd.append('lastName', data.lastName || '');
+        fd.append('gender', data.gender || 'male');
+        fd.append('idCardNumber', data.idCardNumber || '');
+        fd.append('phoneNumber', data.phoneNumber || '');
+        if (data.idImage?.[0]) fd.append('idImage', data.idImage[0]);
+        fd.append('addresses', JSON.stringify({
+          permanent: (data.p_province || data.p_city || data.p_district)
+            ? { province: data.p_province || null, city: data.p_city || null, district: data.p_district || null }
+            : null,
+          current: data.hasCurrentAddress
+            ? { province: data.c_province || null, city: data.c_city || null, district: data.c_district || null }
+            : null,
+        }));
+        const customerRes = await customerService.create(fd);
+        customerId = customerRes.data.data?.customer?.id ?? customerRes.data.data?.id ?? customerRes.data.id;
+      }
+
+      await mobileService.create({
         imei1: data.imei1,
-        imei2: data.imei2,
+        imei2: data.imei2 || undefined,
         brand: data.brand,
         model: data.model,
         color: data.color,
-        ram: data.ram,
-        storage: data.storage,
-      });
-      const mobileId = mobileRes.data.data?.id || mobileRes.data.id;
-
-      // 2. Create Customer
-      const customerFormData = new FormData();
-      customerFormData.append('firstName', data.firstName);
-      customerFormData.append('lastName', data.lastName);
-      customerFormData.append('gender', data.gender);
-      customerFormData.append('idCardNumber', data.idCardNumber);
-      customerFormData.append('phoneNumber', data.phoneNumber);
-      if (data.idImage?.[0]) {
-        customerFormData.append('idImage', data.idImage[0]);
-      }
-      
-      // Addresses
-      const addresses = {
-        permanent: {
-          province: data.p_province,
-          city: data.p_city,
-          district: data.p_district,
-          street: data.p_street,
-          postalCode: data.p_postalCode,
-        },
-        current: data.hasCurrentAddress ? {
-          province: data.c_province,
-          city: data.c_city,
-          district: data.c_district,
-          street: data.c_street,
-          postalCode: data.c_postalCode,
-        } : null,
-      };
-      customerFormData.append('addresses', JSON.stringify(addresses));
-
-      const customerRes = await customerService.create(customerFormData);
-      const customerId = customerRes.data.data?.id || customerRes.data.id;
-
-      // 3. Create Transaction
-      await transactionService.create({
-        mobileId,
-        customerId,
+        ram: data.ram || undefined,
+        storage: data.storage || undefined,
         type: data.transactionType,
-        price: data.price,
-        notes: data.notes,
+        price: data.price || undefined,
+        notes: data.notes || undefined,
+        ...(customerId && { customerId }),
       });
 
-      toast.success('Entry created successfully');
-      reset();
+      toast.success(t('entry.entrySuccess'));
+      form.reset({ transactionType: 'BUY', gender: 'male' });
+      setStep(1);
       fetchRecentEntries();
-    } catch (error) {
-      toast.error(error.message || 'Failed to create entry');
+    } catch (err) {
+      toast.error(err.message || t('entry.entryFailed'));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4">
-        <h2 className="text-3xl font-bold tracking-tight">Create Entry</h2>
-        <p className="text-muted-foreground">Submit mobile, customer, and transaction data in one go.</p>
+    <div className="space-y-10">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">{t('entry.title')}</h2>
+        <p className="text-muted-foreground mt-1">{t('entry.subtitle')}</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Mobile Section */}
-        <Card className="border-none shadow-none bg-background">
-          <CardHeader className="px-0">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Smartphone className="h-5 w-5" /> Mobile Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-0 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>IMEI 1 (15 digits) *</Label>
-              <Input {...register('imei1', { required: true, pattern: /^\d{15}$/ })} placeholder="Enter 15-digit IMEI" />
-              {errors.imei1 && <p className="text-xs text-destructive">Valid 15-digit IMEI required</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>IMEI 2 (Optional, 15 digits)</Label>
-              <Input {...register('imei2', { pattern: /^\d{15}$/ })} placeholder="Enter 15-digit IMEI" />
-              {errors.imei2 && <p className="text-xs text-destructive">Must be 15 digits if provided</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Brand *</Label>
-              <Input {...register('brand', { required: true })} placeholder="e.g. Apple, Samsung" />
-            </div>
-            <div className="space-y-2">
-              <Label>Model *</Label>
-              <Input {...register('model', { required: true })} placeholder="e.g. iPhone 15 Pro" />
-            </div>
-            <div className="space-y-2">
-              <Label>Color *</Label>
-              <Input {...register('color', { required: true })} placeholder="e.g. Titanium Grey" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>RAM (GB)</Label>
-                <Input {...register('ram')} placeholder="8" />
-              </div>
-              <div className="space-y-2">
-                <Label>Storage (GB)</Label>
-                <Input {...register('storage')} placeholder="256" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Customer Section */}
-        <Card className="border-none shadow-none bg-background">
-          <CardHeader className="px-0">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Users className="h-5 w-5" /> Customer Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-0 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>First Name *</Label>
-              <Input {...register('firstName', { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Last Name *</Label>
-              <Input {...register('lastName', { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Gender *</Label>
-              <Select onValueChange={(v) => setValue('gender', v)} defaultValue="MALE">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MALE">Male</SelectItem>
-                  <SelectItem value="FEMALE">Female</SelectItem>
-                  <SelectItem value="OTHER">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>ID Card Number *</Label>
-              <Input {...register('idCardNumber', { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone Number *</Label>
-              <Input {...register('phoneNumber', { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label>ID Image Upload *</Label>
-              <Input type="file" {...register('idImage', { required: true })} accept="image/*" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Addresses */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="border-none shadow-none bg-background">
-            <CardHeader className="px-0">
-              <CardTitle className="text-sm font-semibold">Permanent Address *</CardTitle>
-            </CardHeader>
-            <CardContent className="px-0 space-y-4">
-              <Input {...register('p_province', { required: true })} placeholder="Province" />
-              <Input {...register('p_city', { required: true })} placeholder="City" />
-              <Input {...register('p_district', { required: true })} placeholder="District" />
-              <Input {...register('p_street', { required: true })} placeholder="Street" />
-              <Input {...register('p_postalCode', { required: true })} placeholder="Postal Code" />
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-none bg-background">
-            <CardHeader className="px-0">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-semibold">Current Address</CardTitle>
-                <input type="checkbox" {...register('hasCurrentAddress')} className="rounded border-gray-300" />
-                <span className="text-xs text-muted-foreground">Different from permanent?</span>
-              </div>
-            </CardHeader>
-            <CardContent className="px-0 space-y-4">
-              {watch('hasCurrentAddress') && (
-                <>
-                  <Input {...register('c_province', { required: true })} placeholder="Province" />
-                  <Input {...register('c_city', { required: true })} placeholder="City" />
-                  <Input {...register('c_district', { required: true })} placeholder="District" />
-                  <Input {...register('c_street', { required: true })} placeholder="Street" />
-                  <Input {...register('c_postalCode', { required: true })} placeholder="Postal Code" />
-                </>
-              )}
-              {!watch('hasCurrentAddress') && (
-                <div className="h-full flex items-center justify-center border border-dashed rounded-lg p-8">
-                  <p className="text-xs text-muted-foreground italic text-center">Same as permanent address</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      <div className="border rounded-xl bg-card shadow-sm p-4 sm:p-6 lg:p-8">
+        <Stepper current={step} />
+        <div>
+          {step === 1 && <StepMobile form={form} onNext={() => setStep(2)} />}
+          {step === 2 && <StepTransaction form={form} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
+          {step === 3 && <StepCustomer form={form} onBack={() => setStep(2)} onSubmit={handleFinalSubmit} isLoading={isLoading} />}
         </div>
+      </div>
 
-        {/* Transaction Section */}
-        <Card className="border-none shadow-none bg-background">
-          <CardHeader className="px-0">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <ArrowLeftRight className="h-5 w-5" /> Transaction Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-0 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Transaction Type *</Label>
-              <Select onValueChange={(v) => setValue('transactionType', v)} defaultValue="BUY">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BUY">Buy</SelectItem>
-                  <SelectItem value="SELL">Sell</SelectItem>
-                  <SelectItem value="UNLOCK">Unlock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Price (Optional)</Label>
-              <Input type="number" {...register('price')} placeholder="0.00" />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Notes (Optional)</Label>
-              <Textarea {...register('notes')} placeholder="Any additional details..." />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Button type="submit" size="lg" className="w-full md:w-auto px-12" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Complete Entry
-        </Button>
-      </form>
-
-      {/* Recent Entries */}
-      <div className="space-y-4 pt-8 border-t">
-        <h3 className="text-xl font-bold tracking-tight">Recent Entries</h3>
-        <div className="border rounded-lg overflow-hidden bg-background">
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold tracking-tight">{t('entry.recentEntries')}</h3>
+        <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Mobile</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('entry.customer')}</TableHead>
+                <TableHead>{t('entry.mobile')}</TableHead>
+                <TableHead>{t('entry.type')}</TableHead>
+                <TableHead>{t('entry.priceCol')}</TableHead>
+                <TableHead>{t('entry.time')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isFetchingEntries ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : recentEntries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No recent entries found.
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-sm">
+                    {t('entry.noRecentEntries')}
                   </TableCell>
                 </TableRow>
-              ) : (
-                recentEntries.map((entry) => {
-                  return (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-medium">
-                        {entry.customer?.firstName} {entry.customer?.lastName}
-                      </TableCell>
-                      <TableCell>
-                        {entry.mobile?.brand} {entry.mobile?.model}
-                      </TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                          entry.type === 'BUY' ? "bg-green-100 text-green-700" :
-                          entry.type === 'SELL' ? "bg-blue-100 text-blue-700" :
-                          "bg-purple-100 text-purple-700"
-                        )}>
-                          {entry.type}
-                        </span>
-                      </TableCell>
-                      <TableCell>${entry.price || '0'}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            title="Edit"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            title="Delete"
-                            disabled
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
+              ) : recentEntries.map((entry) => (
+                <TableRow key={entry.id}>
+                  <TableCell className="font-medium">
+                    {entry.customer
+                      ? `${entry.customer.firstName} ${entry.customer.lastName}`
+                      : <span className="text-muted-foreground italic text-xs">{t('entry.noCustomer')}</span>}
+                  </TableCell>
+                  <TableCell>{entry.mobile?.brand} {entry.mobile?.model}</TableCell>
+                  <TableCell>
+                    <span className={cn(
+                      'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide',
+                      entry.type === 'BUY'  ? 'bg-green-100 text-green-700' :
+                      entry.type === 'SELL' ? 'bg-blue-100 text-blue-700' :
+                                              'bg-purple-100 text-purple-700',
+                    )}>{entry.type}</span>
+                  </TableCell>
+                  <TableCell>{entry.price ? `$${entry.price}` : '—'}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {entry.createdAt ? formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true }) : '—'}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
       </div>
     </div>
   );
-};
-
-export default CreateEntry;
+}

@@ -15,7 +15,9 @@ const Mobiles = lazy(() => import('@/pages/admin/Mobiles.jsx'));
 const Transactions = lazy(() => import('@/pages/admin/Transactions.jsx'));
 const Notifications = lazy(() => import('@/pages/admin/Notifications.jsx'));
 const StolenMobiles = lazy(() => import('@/pages/admin/StolenMobiles.jsx'));
+const DetectedStolenMobiles = lazy(() => import('@/pages/admin/DetectedStolenMobiles.jsx'));
 const Users = lazy(() => import('@/pages/admin/Users.jsx'));
+const UserDetail = lazy(() => import('@/pages/admin/UserDetail.jsx'));
 
 export const routes = [
   {
@@ -61,6 +63,10 @@ export const routes = [
         element: <Users />,
       },
       {
+        path: 'users/:id',
+        element: <UserDetail />,
+      },
+      {
         path: 'customers',
         element: <Customers />,
       },
@@ -75,6 +81,10 @@ export const routes = [
       {
         path: 'stolen-mobiles',
         element: <StolenMobiles />,
+      },
+      {
+        path: 'detected-stolen-mobiles',
+        element: <DetectedStolenMobiles />,
       },
       {
         path: 'notifications',

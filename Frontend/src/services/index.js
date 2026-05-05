@@ -38,12 +38,14 @@ export const transactionService = {
 export const adminCustomerService = {
   getAll: (params) => api.get('/api/v1/admin/customers', { params }),
   getById: (id) => api.get(`/api/v1/admin/customers/${id}`),
+  update: (id, data) => api.patch(`/api/v1/admin/customers/${id}`, data),
   delete: (id) => api.delete(`/api/v1/admin/customers/${id}`),
 };
 
 export const adminMobileService = {
   getAll: (params) => api.get('/api/v1/admin/mobiles', { params }),
   getById: (id) => api.get(`/api/v1/admin/mobiles/${id}`),
+  update: (id, data) => api.patch(`/api/v1/admin/mobiles/${id}`, data),
   delete: (id) => api.delete(`/api/v1/admin/mobiles/${id}`),
 };
 
@@ -56,7 +58,9 @@ export const adminTransactionService = {
 export const adminUserService = {
   getAll: (params) => api.get('/api/v1/admin/user/users', { params }),
   getById: (id) => api.get(`/api/v1/admin/user/users/${id}`),
-  getUserMobiles: (id) => api.get(`/api/v1/admin/user/users/${id}/mobiles`),
+  getUserMobiles: (id, params) => api.get(`/api/v1/admin/user/users/${id}/mobiles`, { params }),
+  getUserCustomers: (id, params) => api.get(`/api/v1/admin/user/users/${id}/customers`, { params }),
+  getUserTransactions: (id, params) => api.get(`/api/v1/admin/user/users/${id}/transactions`, { params }),
   create: (data) => api.post('/api/v1/admin/user/users', data),
   update: (id, data) => api.patch(`/api/v1/admin/user/users/${id}`, data),
   delete: (id) => api.delete(`/api/v1/admin/user/users/${id}`),
@@ -81,4 +85,12 @@ export const notificationService = {
 
 export const dashboardService = {
   getStats: () => api.get('/api/v1/admin/dashboard'),
+};
+
+
+export const adminDetectedStolenMobileService = {
+  getAll: (params) => api.get('/api/v1/admin/detected-stolen-mobile/detected-stolen-mobiles', { params }),
+  getById: (id) => api.get(`/api/v1/admin/detected-stolen-mobile/detected-stolen-mobiles/${id}`),
+  delete: (id) => api.delete(`/api/v1/admin/detected-stolen-mobile/detected-stolen-mobiles/${id}`),
+  getStats: () => api.get('/api/v1/admin/detected-stolen-mobile/detected-stolen-mobiles/stats'),
 };

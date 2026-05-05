@@ -5,9 +5,11 @@ import { useAuth } from '../context/AuthContext';
 export const ProtectedRoute = ({ allowedRoles }) => {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="h-8 w-8 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+    </div>
+  );
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -24,9 +26,11 @@ export const ProtectedRoute = ({ allowedRoles }) => {
 export const PublicRoute = () => {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="h-8 w-8 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+    </div>
+  );
 
   if (user) {
     const defaultPath = user.role === 'admin' ? '/admin/dashboard' : '/user/entry';
