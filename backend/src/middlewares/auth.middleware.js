@@ -4,11 +4,27 @@ import { users } from "../db/schema.js";
 import { verifyAccessToken, verifyAndRotateRefreshToken } from "../utils/verifyToken.util.js";
 
 export const authMiddleware = async (req, res, next) => {
-  const { accessToken, refreshToken } = req.cookies;
+  // Try to get tokens from cookies first (for same-origin)
+  let { accessToken, refreshToken } = req.cookies;
   
-  console.log('Auth middleware - Cookies received:', {
+  // If not in cookies, try Authorization header (for cross-origin)
+  if (!accessToken) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      accessToken = authHeader.substring(7);
+    }
+  }
+  
+  // Get refresh token from header if not in cookies
+  if (!refreshToken) {
+    refreshToken = req.headers['x-refresh-token'];
+  }
+  
+  console.log('Auth middleware - Tokens received:', {
     hasAccessToken: !!accessToken,
     hasRefreshToken: !!refreshToken,
+    fromCookies: !!req.cookies.accessToken,
+    fromHeaders: !!req.headers.authorization,
     origin: req.headers.origin
   });
   

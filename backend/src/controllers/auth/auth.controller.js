@@ -57,10 +57,17 @@ export const login = asyncHandler(async (req, res) => {
   console.log('Access token length:', accessToken.length);
   console.log('Refresh token length:', refreshToken.length);
   
+  // Set cookies (for same-origin requests)
   sentCookie("accessToken", res, accessToken);
   sentCookie("refreshToken", res, refreshToken);
 
-  res.respond(200, req.t("auth.loggedIn"), { id: user.id, role: user.role });
+  // Also send tokens in response body (for cross-origin requests)
+  res.respond(200, req.t("auth.loggedIn"), { 
+    id: user.id, 
+    role: user.role,
+    accessToken,
+    refreshToken
+  });
 });
 
 // Logout
