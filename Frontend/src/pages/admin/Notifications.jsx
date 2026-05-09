@@ -1,287 +1,460 @@
-import { useState, useEffect } from 'react';
-import { notificationService } from '../../services';
+import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { notificationService, adminDetectedStolenMobileService } from '../../services';
 import { SectionLoader } from '../../component/Loader';
 import { Button } from '../../component/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../component/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../component/ui/dialog';
-import { Bell, Copy, Trash2, CheckCheck, Check, ShieldAlert, Eye } from 'lucide-react';
+import { Input } from '../../component/ui/input';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '../../component/ui/table';
+import TablePagination from '../../component/ui/TablePagination';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '../../component/ui/dialog';
+import {
+  Bell, Copy, Trash2, CheckCheck, Check, ShieldAlert, Eye, Search, Filter, X,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 
+/* ── Notification type meta ── */
 const NOTIF_META = {
   STOLEN_MATCH: {
     icon: ShieldAlert,
     iconCls: 'text-red-500',
-    badgeCls: 'bg-red-100 text-red-700',
     cardCls: 'border-red-200 bg-red-50/40',
+    badgeCls: 'bg-red-100 text-red-700',
     label: 'Stolen Match',
   },
   DUPLICATE_IMEI: {
     icon: Copy,
     iconCls: 'text-orange-500',
-    badgeCls: 'bg-orange-100 text-orange-700',
     cardCls: 'border-orange-200 bg-orange-50/40',
+    badgeCls: 'bg-orange-100 text-orange-700',
     label: 'Duplicate IMEI',
   },
 };
+const getMeta = (type) =>
+  NOTIF_META[type] || { icon: Bell, iconCls: 'text-muted-foreground', cardCls: '', badgeCls: 'bg-muted', label: type };
 
-const getMeta = (type) => NOTIF_META[type] || {
-  icon: Bell,
-  iconCls: 'text-muted-foreground',
-  badgeCls: 'bg-muted text-muted-foreground',
-  cardCls: '',
-  label: type || 'Info',
-};
-
-function DetailRow({ label, value }) {
-  if (!value) return null;
-  return (
-    <div className="flex justify-between gap-4 py-2 border-b last:border-0">
-      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
-      <span className="text-sm font-medium text-right">{value}</span>
-    </div>
-  );
-}
-
-function NotificationDetailModal({ notif, open, onClose }) {
+/* ── Notification detail modal ── */
+function NotificationModal({ notif, open, onClose }) {
   if (!notif) return null;
-  const { mobile, registeredBy } = notif;
+  const meta = getMeta(notif.type);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Copy className="h-4 w-4 text-orange-500" />
-            Duplicate IMEI Details
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-5 mt-2">
-          {/* Alert message */}
-          <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3">
-            <p className="text-sm text-orange-800">{notif.message}</p>
-            <p className="text-xs text-orange-500 mt-1">
-              {notif.createdAt ? format(new Date(notif.createdAt), 'MMM dd, yyyy · HH:mm') : '—'}
-            </p>
+        <div className="flex items-center gap-3 px-6 py-5 border-b shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <meta.icon className={cn('h-5 w-5', meta.iconCls)} />
           </div>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-base font-bold leading-tight">
+              Notification Details
+            </DialogTitle>
+            <DialogDescription className="text-xs mt-0.5">
+              <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold uppercase mr-1.5', meta.badgeCls)}>
+                {meta.label}
+              </span>
+              {notif.createdAt ? format(new Date(notif.createdAt), 'MMM dd, yyyy · HH:mm') : '—'}
+            </DialogDescription>
+          </div>
+        </div>
 
-          {/* Mobile info */}
-          {mobile && (
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <p className="text-[10px] text-muted-foreground mb-0.5">Message</p>
+            <p className="text-sm">{notif.message}</p>
+          </div>
+          {notif.imei && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Mobile Details</p>
-              <div className="rounded-lg border px-4 py-1">
-                <DetailRow label="IMEI 1" value={mobile.imei1} />
-                <DetailRow label="IMEI 2" value={mobile.imei2} />
-                <DetailRow label="Brand" value={mobile.brand} />
-                <DetailRow label="Model" value={mobile.model} />
-                <DetailRow label="Color" value={mobile.color} />
-                <DetailRow label="RAM" value={mobile.ram} />
-                <DetailRow label="Storage" value={mobile.storage} />
-                <DetailRow label="Registered" value={mobile.createdAt ? format(new Date(mobile.createdAt), 'MMM dd, yyyy · HH:mm') : null} />
-              </div>
+              <p className="text-[10px] text-muted-foreground mb-0.5">IMEI</p>
+              <p className="text-sm font-mono tracking-wide">{notif.imei}</p>
             </div>
           )}
-
-          {/* Registered by */}
-          {registeredBy && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Registered By</p>
-              <div className="rounded-lg border px-4 py-1">
-                <DetailRow label="Name" value={registeredBy.name} />
-                <DetailRow label="Email" value={registeredBy.email} />
-                <DetailRow label="Phone" value={registeredBy.phone} />
-                <DetailRow label="Shop No." value={registeredBy.shopNumber} />
+          {notif.mobile && (
+            <>
+              <div className="border-t" />
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Mobile Details</p>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                {[
+                  { label: 'Brand', value: notif.mobile.brand },
+                  { label: 'Model', value: notif.mobile.model },
+                  { label: 'IMEI 1', value: notif.mobile.imei1, mono: true },
+                  { label: 'IMEI 2', value: notif.mobile.imei2, mono: true },
+                  { label: 'Color', value: notif.mobile.color },
+                  { label: 'RAM / Storage', value: notif.mobile.ram ? `${notif.mobile.ram}GB / ${notif.mobile.storage}GB` : null },
+                ].map(({ label, value, mono }) => value ? (
+                  <div key={label}>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
+                    <p className={cn('text-sm font-semibold break-all', mono && 'font-mono tracking-wide')}>{value}</p>
+                  </div>
+                ) : null)}
               </div>
-            </div>
+            </>
           )}
-
-          {/* All transactions on this mobile */}
-          {mobile?.transactions?.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                All Registrations ({mobile.transactions.length})
-              </p>
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mobile.transactions.map((tx) => (
-                      <TableRow key={tx.id}>
-                        <TableCell>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted">{tx.type}</span>
-                        </TableCell>
-                        <TableCell className="text-xs">{tx.user?.name || tx.user?.email || '—'}</TableCell>
-                        <TableCell className="text-xs">
-                          {tx.customer ? `${tx.customer.firstName} ${tx.customer.lastName}` : '—'}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {tx.createdAt ? format(new Date(tx.createdAt), 'MMM dd, yyyy') : '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          {notif.registeredBy && (
+            <>
+              <div className="border-t" />
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Registered By</p>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                {[
+                  { label: 'Name', value: notif.registeredBy.name },
+                  { label: 'Email', value: notif.registeredBy.email },
+                  { label: 'Shop No.', value: notif.registeredBy.shopNumber },
+                ].map(({ label, value }) => value ? (
+                  <div key={label}>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
+                    <p className="text-sm font-semibold break-all">{value}</p>
+                  </div>
+                ) : null)}
               </div>
-            </div>
+            </>
           )}
+        </div>
+
+        <div className="px-6 py-4 border-t shrink-0 flex justify-end">
+          <Button variant="outline" onClick={onClose}>Close</Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-export default function Notifications() {
-  const [notifications, setNotifications] = useState([]);
-  const [isLoading, setIsLoading]         = useState(true);
-  const [selected, setSelected]           = useState(null);
+/* ── Detected stolen mobile detail modal ── */
+function DetectedModal({ item, open, onClose }) {
+  if (!item) return null;
 
-  const fetchNotifications = async () => {
-    setIsLoading(true);
+  const sections = [
+    {
+      title: 'Stolen Mobile Report',
+      fields: [
+        { label: 'Brand & Model', value: item.stolenMobile ? `${item.stolenMobile.brand} ${item.stolenMobile.model}` : null },
+        { label: 'IMEI 1', value: item.stolenMobile?.imei1, mono: true },
+        { label: 'IMEI 2', value: item.stolenMobile?.imei2, mono: true },
+        { label: 'Color', value: item.stolenMobile?.color },
+        { label: 'RAM / Storage', value: item.stolenMobile?.ram ? `${item.stolenMobile.ram}GB / ${item.stolenMobile.storage}GB` : null },
+        { label: 'Reporter', value: item.stolenMobile?.reporterName },
+        { label: 'Reporter Phone', value: item.stolenMobile?.reporterPhone },
+        { label: 'Reported At', value: item.stolenMobile?.createdAt ? format(new Date(item.stolenMobile.createdAt), 'MMM dd, yyyy') : null },
+      ],
+    },
+    {
+      title: 'Registered Mobile',
+      fields: [
+        { label: 'Brand & Model', value: item.mobile ? `${item.mobile.brand} ${item.mobile.model}` : null },
+        { label: 'IMEI 1', value: item.mobile?.imei1, mono: true },
+        { label: 'IMEI 2', value: item.mobile?.imei2, mono: true },
+        { label: 'Color', value: item.mobile?.color },
+        { label: 'RAM / Storage', value: item.mobile?.ram ? `${item.mobile.ram}GB / ${item.mobile.storage}GB` : null },
+        { label: 'Registered At', value: item.mobile?.createdAt ? format(new Date(item.mobile.createdAt), 'MMM dd, yyyy') : null },
+      ],
+    },
+    {
+      title: 'Transaction Details',
+      fields: [
+        { label: 'Type', value: item.transaction?.type },
+        { label: 'Price', value: item.transaction?.price ? `${item.transaction.price}` : null },
+        { label: 'Notes', value: item.transaction?.notes },
+        { label: 'Date', value: item.transaction?.createdAt ? format(new Date(item.transaction.createdAt), 'MMM dd, yyyy') : null },
+      ],
+    },
+    {
+      title: 'Registered By',
+      fields: [
+        { label: 'Name', value: item.transaction?.user?.name },
+        { label: 'Email', value: item.transaction?.user?.email },
+        { label: 'Phone', value: item.transaction?.user?.phone },
+        { label: 'Shop No.', value: item.transaction?.user?.shopNumber },
+      ],
+    },
+    {
+      title: 'Customer',
+      fields: [
+        { label: 'Name', value: item.transaction?.customer ? `${item.transaction.customer.firstName} ${item.transaction.customer.lastName}` : null },
+        { label: 'Phone', value: item.transaction?.customer?.phoneNumber },
+        { label: 'ID Card', value: item.transaction?.customer?.idCardNumber, mono: true },
+      ],
+    },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg rounded-2xl p-0">
+        <div className="flex items-center gap-3 px-6 py-5 border-b shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+            <ShieldAlert className="h-5 w-5 text-red-500" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-base font-bold leading-tight">
+              Detected Stolen Mobile Details
+            </DialogTitle>
+            <DialogDescription className="text-xs mt-0.5">
+              Match detected on {item.detectedAt ? format(new Date(item.detectedAt), 'MMM dd, yyyy · HH:mm') : '—'}
+            </DialogDescription>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto max-h-[60vh] px-6 py-5 space-y-6">
+          {sections.map((section) => {
+            const visible = section.fields.filter((f) => f.value);
+            if (!visible.length) return null;
+            return (
+              <section key={section.title} className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{section.title}</p>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                  {visible.map(({ label, value, mono }) => (
+                    <div key={label}>
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
+                      <p className={cn('text-sm font-semibold break-all', mono && 'font-mono tracking-wide')}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t" />
+              </section>
+            );
+          })}
+        </div>
+
+        <div className="px-6 py-4 border-t shrink-0 flex justify-end">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── Main component ── */
+const LIMIT = 7;
+const EMPTY_FILTERS = { q: '' };
+
+export default function Notifications() {
+  const { t } = useTranslation();
+
+  /* notifications */
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotif, setLoadingNotif] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [selectedNotif, setSelectedNotif] = useState(null);
+
+  /* detected table */
+  const [detected, setDetected] = useState([]);
+  const [loadingDetected, setLoadingDetected] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [draft, setDraft] = useState(EMPTY_FILTERS);
+  const [applied, setApplied] = useState(EMPTY_FILTERS);
+  const hasActiveFilters = Object.values(applied).some((v) => v !== '');
+
+  /* modals */
+  const [selectedDetected, setSelectedDetected] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  /* ── fetch notifications ── */
+  const fetchNotifications = async (type = typeFilter) => {
+    setLoadingNotif(true);
     try {
-      const res = await notificationService.getAll({ limit: 100 });
-      const raw = res?.data?.data;
-      setNotifications(Array.isArray(raw?.notifications) ? raw.notifications : []);
+      const params = { limit: 100, isRead: false };
+      if (type) params.type = type;
+      const res = await notificationService.getAll(params);
+      setNotifications(res?.data?.data?.notifications || []);
     } catch {
-      toast.error('Failed to load notifications');
+      toast.error(t('notifications.failedLoad'));
       setNotifications([]);
     } finally {
-      setIsLoading(false);
+      setLoadingNotif(false);
     }
   };
 
-  useEffect(() => { fetchNotifications(); }, []);
+  /* ── fetch detected ── */
+  const fetchDetected = async (filters = applied, currentPage = page) => {
+    setLoadingDetected(true);
+    try {
+      const params = { page: currentPage, limit: LIMIT };
+      if (filters.q) params.q = filters.q;
+      const res = await adminDetectedStolenMobileService.getAll(params);
+      const data = res?.data?.data;
+      setDetected(data?.detectedStolenMobiles || []);
+      setTotal(data?.pagination?.total || 0);
+      setTotalPages(data?.pagination?.totalPages || 1);
+    } catch {
+      toast.error(t('notifications.failedLoad'));
+      setDetected([]);
+    } finally {
+      setLoadingDetected(false);
+    }
+  };
 
-  const handleMarkAsRead = async (id) => {
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    fetchNotifications();
+    fetchDetected(EMPTY_FILTERS, 1);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return; }
+    fetchDetected(applied, page);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  /* ── notification actions ── */
+  const markAsRead = async (id) => {
     try {
       await notificationService.markAsRead(id);
-      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
-    } catch { toast.error('Failed to mark as read'); }
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      toast.success(t('notifications.markedReadSuccess'));
+    } catch {
+      toast.error(t('notifications.errorMarkAsRead'));
+    }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const markAll = async () => {
     try {
       await notificationService.markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      toast.success('All notifications marked as read');
-    } catch { toast.error('Failed to mark all as read'); }
+      setNotifications([]);
+      toast.success(t('notifications.allMarkedReadSuccess'));
+    } catch {
+      toast.error(t('notifications.errorMarkAllAsRead'));
+    }
   };
 
-  const handleDelete = async (id) => {
+  const deleteNotif = async (id) => {
     try {
       await notificationService.delete(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch { toast.error('Failed to delete notification'); }
+      toast.success(t('notifications.deleteSuccess'));
+    } catch {
+      toast.error(t('notifications.errorDeleteNotification'));
+    }
   };
 
-  const handleDeleteAllRead = async () => {
+  const deleteAllRead = async () => {
     try {
       await notificationService.deleteAllRead();
-      setNotifications((prev) => prev.filter((n) => !n.isRead));
-      toast.success('All read notifications deleted');
-    } catch { toast.error('Failed to delete read notifications'); }
+      toast.success(t('notifications.allReadDeletedSuccess'));
+      fetchNotifications();
+    } catch {
+      toast.error(t('notifications.errorDeleteRead'));
+    }
   };
 
-  const handleOpen = (notif) => {
-    setSelected(notif);
-    if (!notif.isRead) handleMarkAsRead(notif.id);
+  /* ── detected actions ── */
+  const handleDeleteDetected = async () => {
+    if (!deleteTarget) return;
+    try {
+      await adminDetectedStolenMobileService.delete(deleteTarget.id);
+      toast.success(t('notifications.deletedDetectedSuccess'));
+      setDeleteTarget(null);
+      fetchDetected(applied, page);
+    } catch {
+      toast.error(t('notifications.errorDeleteDetected'));
+    }
   };
 
-  const unreadCount   = notifications.filter((n) => !n.isRead).length;
-  const stolenMatches = notifications.filter((n) => n.type === 'STOLEN_MATCH');
+  /* ── filters ── */
+  const applyFilters = () => { setPage(1); setApplied(draft); fetchDetected(draft, 1); };
+  const clearFilters = () => { setDraft(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); setPage(1); fetchDetected(EMPTY_FILTERS, 1); };
+
+  const handleTypeFilter = (type) => {
+    const next = typeFilter === type ? '' : type;
+    setTypeFilter(next);
+    fetchNotifications(next);
+  };
+
+  const unread = notifications.length;
 
   return (
     <div className="space-y-10">
-      <NotificationDetailModal notif={selected} open={!!selected} onClose={() => setSelected(null)} />
 
-      {/* ── Notifications ──────────────────────────────────────────────────── */}
-      <section className="space-y-5">
+      {/* ── NOTIFICATIONS SECTION ── */}
+      <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              Notifications
-              {unreadCount > 0 && (
-                <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                  {unreadCount}
-                </span>
+              {t('notifications.title')}
+              {unread > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{unread}</span>
               )}
             </h2>
-            <p className="text-sm text-muted-foreground mt-0.5">System alerts for duplicate IMEIs and stolen mobile matches.</p>
+            <p className="text-sm text-muted-foreground">{t('notifications.subtitle')}</p>
           </div>
-          {notifications.length > 0 && (
-            <div className="flex flex-wrap gap-2 shrink-0">
-              {unreadCount > 0 && (
-                <Button variant="outline" size="sm" onClick={handleMarkAllAsRead} className="gap-1.5">
-                  <CheckCheck className="h-3.5 w-3.5" /> Mark all read
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={handleDeleteAllRead} className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
-                <Trash2 className="h-3.5 w-3.5" /> Delete read
-              </Button>
-            </div>
-          )}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* type filter pills */}
+            {['STOLEN_MATCH', 'DUPLICATE_IMEI'].map((type) => {
+              const meta = getMeta(type);
+              return (
+                <button
+                  key={type}
+                  onClick={() => handleTypeFilter(type)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors',
+                    typeFilter === type ? meta.badgeCls + ' border-transparent' : 'bg-background border-border text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {meta.label}
+                </button>
+              );
+            })}
+            <Button size="sm" variant="outline" onClick={deleteAllRead} className="flex items-center gap-1.5">
+              <Trash2 className="h-3.5 w-3.5" /> {t('notifications.deleteRead')}
+            </Button>
+            <Button size="sm" onClick={markAll} className="flex items-center gap-1.5">
+              <CheckCheck className="h-3.5 w-3.5" /> {t('notifications.markAllRead')}
+            </Button>
+          </div>
         </div>
 
-        {isLoading ? (
+        {loadingNotif ? (
           <SectionLoader />
         ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 border border-dashed rounded-xl text-muted-foreground">
-            <Bell className="h-10 w-10 mb-3 opacity-20" />
-            <p className="text-sm">No notifications yet.</p>
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground border rounded-lg bg-muted/20">
+            <Bell className="h-8 w-8 mb-2 opacity-40" />
+            <p className="text-sm">{t('notifications.noNotifications')}</p>
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {notifications.map((notif) => {
-              const meta = getMeta(notif.type);
+          <div className="space-y-2">
+            {notifications.map((n) => {
+              const meta = getMeta(n.type);
               const Icon = meta.icon;
-              const isDuplicate = notif.type === 'DUPLICATE_IMEI';
               return (
                 <div
-                  key={notif.id}
+                  key={n.id}
                   className={cn(
-                    'flex items-start gap-4 rounded-xl border px-4 py-3.5 transition-colors',
-                    notif.isRead ? 'bg-background' : meta.cardCls,
-                    isDuplicate && 'cursor-pointer hover:shadow-sm',
+                    'flex justify-between items-start border rounded-lg p-3 transition-colors',
+                    !n.isRead && meta.cardCls
                   )}
-                  onClick={isDuplicate ? () => handleOpen(notif) : undefined}
                 >
-                  <div className={cn('shrink-0 mt-0.5 h-8 w-8 rounded-lg flex items-center justify-center', notif.isRead ? 'bg-muted' : 'bg-background border')}>
-                    <Icon className={cn('h-4 w-4', notif.isRead ? 'text-muted-foreground' : meta.iconCls)} />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={cn('text-[10px] font-bold uppercase px-2 py-0.5 rounded-full', notif.isRead ? 'bg-muted text-muted-foreground' : meta.badgeCls)}>
-                        {meta.label}
-                      </span>
-                      {!notif.isRead && <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />}
-                      {isDuplicate && (
-                        <span className="text-[10px] text-orange-500 flex items-center gap-0.5 ml-1">
-                          <Eye className="h-3 w-3" /> View details
+                  <div className="flex gap-3 cursor-pointer flex-1 min-w-0" onClick={() => setSelectedNotif(n)}>
+                    <Icon className={cn('h-5 w-5 mt-0.5 shrink-0', meta.iconCls)} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold uppercase', meta.badgeCls)}>
+                          {meta.label}
                         </span>
-                      )}
-                      <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
-                        {notif.createdAt ? formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true }) : '—'}
-                      </span>
+                        {!n.isRead && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
+                        )}
+                      </div>
+                      <p className="text-sm">{n.message}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {n.createdAt ? formatDistanceToNow(new Date(n.createdAt), { addSuffix: true }) : '—'}
+                      </p>
                     </div>
-                    <p className={cn('text-sm leading-snug', !notif.isRead && 'font-medium')}>{notif.message}</p>
-                    {notif.imei && <p className="text-xs font-mono text-muted-foreground">IMEI: {notif.imei}</p>}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {!notif.isRead && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Mark as read" onClick={() => handleMarkAsRead(notif.id)}>
-                        <Check className="h-3.5 w-3.5" />
+
+                  <div className="flex gap-1 shrink-0 ml-2">
+                    {!n.isRead && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title={t('notifications.markAsRead')} onClick={() => markAsRead(n.id)}>
+                        <Check className="h-4 w-4 text-green-500" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" title="Delete" onClick={() => handleDelete(notif.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" title={t('notifications.delete')} onClick={() => deleteNotif(n.id)}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -291,32 +464,129 @@ export default function Notifications() {
         )}
       </section>
 
-      {/* ── Detected Stolen Mobiles Link ────────────────────────────────────── */}
-      <section className="space-y-5">
+      {/* ── DETECTED STOLEN MOBILES TABLE ── */}
+      <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-red-500" />
-            Detected Stolen Mobiles
+            <ShieldAlert className="h-6 w-6 text-red-500" />
+            {t('notifications.detectedTitle')}
           </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            View detailed information about mobiles registered by users that matched stolen mobile reports.
+          <p className="text-sm text-muted-foreground">
+            {t('notifications.detectedSubtitle')} — {total} {t('common.total')}
           </p>
         </div>
 
-        <div className="border rounded-lg bg-background p-6 text-center">
-          <ShieldAlert className="h-12 w-12 text-red-500 mx-auto mb-3" />
-          <h3 className="font-semibold text-lg mb-2">Stolen Mobile Detection System</h3>
-          <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-            Our system automatically detects when registered mobiles match reported stolen devices. 
-            View detailed matches with filtering and analytics.
-          </p>
-          <Button asChild>
-            <a href="/admin/detected-stolen-mobiles">
-              View Detected Stolen Mobiles
-            </a>
-          </Button>
+        {/* filters */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t('notifications.searchPlaceholder')}
+                className="pl-9"
+                value={draft.q}
+                onChange={(e) => setDraft({ q: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button onClick={applyFilters} size="sm" className="flex items-center gap-2">
+              <Filter className="h-3.5 w-3.5" /> {t('notifications.applyFilters')}
+            </Button>
+            {hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters} className="flex items-center gap-2">
+                <X className="h-3.5 w-3.5" /> {t('common.cancel')}
+              </Button>
+            )}
+            {hasActiveFilters && (
+              <span className="text-xs text-muted-foreground">
+                {applied.q && `"${applied.q}"`}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* table */}
+        <div className="border rounded-lg bg-background overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('detectedStolenMobiles.mobile')}</TableHead>
+                <TableHead>IMEI 1</TableHead>
+                <TableHead>{t('detectedStolenMobiles.reporter')}</TableHead>
+                <TableHead>Reporter Phone</TableHead>
+                <TableHead>{t('detectedStolenMobiles.detectedAt')}</TableHead>
+                <TableHead className="text-right rtl:text-left">{t('common.actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingDetected ? (
+                <TableRow><TableCell colSpan={6} className="p-0"><SectionLoader /></TableCell></TableRow>
+              ) : detected.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    No detected stolen mobiles found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                detected.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium whitespace-nowrap">
+                      {item.mobile?.brand} {item.mobile?.model}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{item.mobile?.imei1 || '—'}</TableCell>
+                    <TableCell>{item.stolenMobile?.reporterName || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{item.stolenMobile?.reporterPhone || '—'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {item.detectedAt ? format(new Date(item.detectedAt), 'MMM dd, yyyy') : '—'}
+                    </TableCell>
+                    <TableCell className="text-right rtl:text-left">
+                      <div className="flex justify-end rtl:justify-start gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                          onClick={() => setSelectedDetected(item)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => setDeleteTarget(item)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <TablePagination page={page} totalPages={totalPages} total={total} limit={LIMIT} onPageChange={(p) => setPage(p)} />
       </section>
+
+      {/* ── MODALS ── */}
+      <NotificationModal notif={selectedNotif} open={!!selectedNotif} onClose={() => setSelectedNotif(null)} />
+
+      <DetectedModal item={selectedDetected} open={!!selectedDetected} onClose={() => setSelectedDetected(null)} />
+
+      {/* Delete confirmation modal */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
+            <DialogHeader>
+              <DialogTitle>{t('notifications.deleteDetectedTitle')}</DialogTitle>
+              <DialogDescription>{t('notifications.deleteDetectedDescription')}</DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setDeleteTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" className="w-full sm:w-auto" onClick={handleDeleteDetected}>
+              {t('common.delete')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { ArrowLeft, Smartphone, Users, ArrowLeftRight, Search, ShoppingCart, Tag
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const LIMIT = 10;
 
@@ -19,21 +20,21 @@ const TX_META = {
   UNLOCK: { icon: Unlock,       cls: 'bg-purple-100 text-purple-700' },
 };
 
-const TABS = [
-  { key: 'mobiles',      label: 'Mobiles',      icon: Smartphone     },
-  { key: 'customers',    label: 'Customers',    icon: Users          },
-  { key: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
-];
-
 export default function UserDetail() {
+  const { t } = useTranslation();
   const { id }   = useParams();
   const navigate = useNavigate();
+
+  const TABS = [
+    { key: 'mobiles',      label: t('userDetail.mobiles'),      icon: Smartphone     },
+    { key: 'customers',    label: t('userDetail.customers'),    icon: Users          },
+    { key: 'transactions', label: t('userDetail.transactions'), icon: ArrowLeftRight },
+  ];
 
   const [user,        setUser]        = useState(null);
   const [userLoading, setUserLoading] = useState(true);
   const [activeTab,   setActiveTab]   = useState('mobiles');
 
-  // mobiles
   const [mobiles,       setMobiles]       = useState([]);
   const [mobLoading,    setMobLoading]    = useState(false);
   const [mobPage,       setMobPage]       = useState(1);
@@ -42,31 +43,28 @@ export default function UserDetail() {
   const [mobSearch,     setMobSearch]     = useState('');
   const mobDebounce = useRef(null);
 
-  // customers
-  const [customers,       setCustomers]       = useState([]);
-  const [custLoading,     setCustLoading]      = useState(false);
-  const [custPage,        setCustPage]         = useState(1);
-  const [custTotal,       setCustTotal]        = useState(0);
-  const [custTotalPages,  setCustTotalPages]   = useState(1);
-  const [custSearch,      setCustSearch]       = useState('');
+  const [customers,       setCustomers]     = useState([]);
+  const [custLoading,     setCustLoading]   = useState(false);
+  const [custPage,        setCustPage]      = useState(1);
+  const [custTotal,       setCustTotal]     = useState(0);
+  const [custTotalPages,  setCustTotalPages] = useState(1);
+  const [custSearch,      setCustSearch]    = useState('');
   const custDebounce = useRef(null);
 
-  // transactions
-  const [transactions,   setTransactions]   = useState([]);
-  const [txLoading,      setTxLoading]      = useState(false);
-  const [txPage,         setTxPage]         = useState(1);
-  const [txTotal,        setTxTotal]        = useState(0);
-  const [txTotalPages,   setTxTotalPages]   = useState(1);
-  const [txType,         setTxType]         = useState('');
+  const [transactions,  setTransactions]  = useState([]);
+  const [txLoading,     setTxLoading]     = useState(false);
+  const [txPage,        setTxPage]        = useState(1);
+  const [txTotal,       setTxTotal]       = useState(0);
+  const [txTotalPages,  setTxTotalPages]  = useState(1);
+  const [txType,        setTxType]        = useState('');
 
-  // ── Load user profile ───────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
         const res = await adminUserService.getById(id);
         setUser(res.data.data?.user ?? res.data.data);
       } catch {
-        toast.error('User not found');
+        toast.error(t('userDetail.userNotFound'));
         navigate('/admin/users');
       } finally {
         setUserLoading(false);
@@ -75,7 +73,6 @@ export default function UserDetail() {
     load();
   }, [id]);
 
-  // ── Fetchers ────────────────────────────────────────────────────────────────
   const fetchMobiles = useCallback(async (pg = 1, q = mobSearch) => {
     setMobLoading(true);
     try {
@@ -109,31 +106,42 @@ export default function UserDetail() {
     } catch { setTransactions([]); } finally { setTxLoading(false); }
   }, [id]);
 
-  // Load on tab switch
+  const tabMounted = useRef({ mobiles: false, customers: false, transactions: false });
+
   useEffect(() => {
     if (activeTab === 'mobiles')      fetchMobiles(1, '');
     if (activeTab === 'customers')    fetchCustomers(1, '');
     if (activeTab === 'transactions') fetchTransactions(1, '');
   }, [activeTab]);
 
-  useEffect(() => { if (activeTab === 'mobiles')      fetchMobiles(mobPage);      }, [mobPage]);
-  useEffect(() => { if (activeTab === 'customers')    fetchCustomers(custPage);    }, [custPage]);
-  useEffect(() => { if (activeTab === 'transactions') fetchTransactions(txPage);   }, [txPage]);
+  useEffect(() => {
+    if (!tabMounted.current.mobiles) { tabMounted.current.mobiles = true; return; }
+    if (activeTab === 'mobiles') fetchMobiles(mobPage);
+  }, [mobPage]);
+
+  useEffect(() => {
+    if (!tabMounted.current.customers) { tabMounted.current.customers = true; return; }
+    if (activeTab === 'customers') fetchCustomers(custPage);
+  }, [custPage]);
+
+  useEffect(() => {
+    if (!tabMounted.current.transactions) { tabMounted.current.transactions = true; return; }
+    if (activeTab === 'transactions') fetchTransactions(txPage);
+  }, [txPage]);
 
   if (userLoading) return <SectionLoader />;
 
   return (
     <div className="space-y-6">
 
-      {/* Header */}
       <div className="flex items-start gap-3">
         <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 mt-0.5" onClick={() => navigate('/admin/users')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold tracking-tight">{user?.name || 'Unnamed User'}</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{user?.name || t('userDetail.unnamedUser')}</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {user?.email}{user?.shopNumber ? ` · Shop #${user.shopNumber}` : ''}{user?.phone ? ` · ${user.phone}` : ''}
+            {user?.email}{user?.shopNumber ? ` · ${t('userDetail.shopNo')} ${user.shopNumber}` : ''}{user?.phone ? ` · ${user.phone}` : ''}
           </p>
         </div>
         <span className={cn('shrink-0 mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase',
@@ -142,12 +150,11 @@ export default function UserDetail() {
         </span>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          { label: 'Mobiles',      value: mobTotal,  icon: Smartphone,     color: 'text-primary'   },
-          { label: 'Customers',    value: custTotal,  icon: Users,          color: 'text-green-600' },
-          { label: 'Transactions', value: txTotal,    icon: ArrowLeftRight, color: 'text-orange-600'},
+          { label: t('userDetail.mobiles'),      value: mobTotal,  icon: Smartphone,     color: 'text-primary'    },
+          { label: t('userDetail.customers'),    value: custTotal,  icon: Users,          color: 'text-green-600'  },
+          { label: t('userDetail.transactions'), value: txTotal,    icon: ArrowLeftRight, color: 'text-orange-600' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="rounded-xl border bg-background px-4 py-3 flex items-center gap-3">
             <Icon className={cn('h-5 w-5 shrink-0', color)} />
@@ -159,7 +166,6 @@ export default function UserDetail() {
         ))}
       </div>
 
-      {/* Tabs */}
       <div className="border-b flex overflow-x-auto">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setActiveTab(key)}
@@ -172,13 +178,12 @@ export default function UserDetail() {
         ))}
       </div>
 
-      {/* ── Mobiles Tab ──────────────────────────────────────────────────────── */}
+      {/* Mobiles Tab */}
       {activeTab === 'mobiles' && (
         <div className="space-y-4">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={mobSearch} placeholder="Search IMEI, brand, model..."
-              className="pl-9"
+            <Input value={mobSearch} placeholder={t('userDetail.searchMobiles')} className="pl-9"
               onChange={(e) => {
                 setMobSearch(e.target.value); setMobPage(1);
                 clearTimeout(mobDebounce.current);
@@ -189,19 +194,19 @@ export default function UserDetail() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Device</TableHead>
-                  <TableHead>IMEI 1</TableHead>
-                  <TableHead>IMEI 2</TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead>RAM / Storage</TableHead>
-                  <TableHead>Registered</TableHead>
+                  <TableHead>{t('userDetail.device')}</TableHead>
+                  <TableHead>{t('userDetail.imei1')}</TableHead>
+                  <TableHead>{t('userDetail.imei2')}</TableHead>
+                  <TableHead>{t('userDetail.color')}</TableHead>
+                  <TableHead>{t('userDetail.ramStorage')}</TableHead>
+                  <TableHead>{t('userDetail.registered')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {mobLoading ? (
                   <TableRow><TableCell colSpan={6} className="p-0"><SectionLoader /></TableCell></TableRow>
                 ) : mobiles.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No mobiles found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">{t('userDetail.noMobiles')}</TableCell></TableRow>
                 ) : mobiles.map((mob) => (
                   <TableRow key={mob.id}>
                     <TableCell>
@@ -226,13 +231,12 @@ export default function UserDetail() {
         </div>
       )}
 
-      {/* ── Customers Tab ────────────────────────────────────────────────────── */}
+      {/* Customers Tab */}
       {activeTab === 'customers' && (
         <div className="space-y-4">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={custSearch} placeholder="Search name, phone, ID..."
-              className="pl-9"
+            <Input value={custSearch} placeholder={t('userDetail.searchCustomers')} className="pl-9"
               onChange={(e) => {
                 setCustSearch(e.target.value); setCustPage(1);
                 clearTimeout(custDebounce.current);
@@ -243,18 +247,18 @@ export default function UserDetail() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>ID Card</TableHead>
-                  <TableHead>Added</TableHead>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>{t('userDetail.gender')}</TableHead>
+                  <TableHead>{t('userDetail.phone')}</TableHead>
+                  <TableHead>{t('userDetail.idCard')}</TableHead>
+                  <TableHead>{t('userDetail.added')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {custLoading ? (
                   <TableRow><TableCell colSpan={5} className="p-0"><SectionLoader /></TableCell></TableRow>
                 ) : customers.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No customers found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">{t('userDetail.noCustomers')}</TableCell></TableRow>
                 ) : customers.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.firstName} {c.lastName}</TableCell>
@@ -281,34 +285,34 @@ export default function UserDetail() {
         </div>
       )}
 
-      {/* ── Transactions Tab ──────────────────────────────────────────────────── */}
+      {/* Transactions Tab */}
       {activeTab === 'transactions' && (
         <div className="space-y-4">
           <select value={txType}
             onChange={(e) => { setTxType(e.target.value); setTxPage(1); fetchTransactions(1, e.target.value); }}
             className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-full sm:w-40">
-            <option value="">All types</option>
-            <option value="BUY">Buy</option>
-            <option value="SELL">Sell</option>
-            <option value="UNLOCK">Unlock</option>
+            <option value="">{t('userDetail.allTypes')}</option>
+            <option value="BUY">{t('userDetail.buy')}</option>
+            <option value="SELL">{t('userDetail.sell')}</option>
+            <option value="UNLOCK">{t('userDetail.unlock')}</option>
           </select>
           <div className="border rounded-lg bg-background overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Mobile</TableHead>
-                  <TableHead>IMEI</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>{t('userDetail.type')}</TableHead>
+                  <TableHead>{t('userDetail.mobile')}</TableHead>
+                  <TableHead>{t('userDetail.imei')}</TableHead>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>{t('userDetail.price')}</TableHead>
+                  <TableHead>{t('userDetail.date')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {txLoading ? (
                   <TableRow><TableCell colSpan={6} className="p-0"><SectionLoader /></TableCell></TableRow>
                 ) : transactions.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No transactions found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">{t('userDetail.noTransactions')}</TableCell></TableRow>
                 ) : transactions.map((tx) => {
                   const meta   = TX_META[tx.type] || TX_META.BUY;
                   const TxIcon = meta.icon;
@@ -325,8 +329,8 @@ export default function UserDetail() {
                       <TableCell className="font-mono text-xs">{tx.mobile?.imei1 || '—'}</TableCell>
                       <TableCell className="text-sm">
                         {tx.customer
-                          ? `${tx.customer.firstName} ${tx.customer.lastName}`
-                          : <span className="text-muted-foreground italic text-xs">No customer</span>}
+                          ? `${tx.customer.firstName} ${tx.customer.lastName}`.trim()
+                          : <span className="text-muted-foreground italic text-xs">{t('userDetail.noCustomer')}</span>}
                       </TableCell>
                       <TableCell className="font-semibold text-sm">{tx.price ? `$${tx.price}` : '—'}</TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">

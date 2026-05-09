@@ -3,12 +3,25 @@ import { dashboardService } from '../../services';
 import { SectionLoader } from '../../component/Loader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../component/ui/card';
 import {
-  Users, Smartphone, ShieldAlert, Bell, UserCheck, Copy, AlertTriangle, BarChart3
+  Users, Smartphone, ShieldAlert, Bell, UserCheck, Copy, AlertTriangle, BarChart3, TrendingUp
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import {
+  BarChart,
+  Bar,
+  ComposedChart,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -29,12 +42,17 @@ const Dashboard = () => {
   if (isLoading) return <SectionLoader />;
 
   const stats = data?.stats || {};
-  const recentDetectedStolenMobiles = data?.recentDetectedStolenMobiles || [];
-  const recentDuplicateIMEIs = data?.recentDuplicateIMEIs || [];
+  const chartData = data?.chartData || [];
+
+  // Format chart data for display
+  const formattedChartData = chartData.map(item => ({
+    ...item,
+    monthLabel: format(parseISO(item.month + '-01'), 'MMM yy'),
+  }));
 
   const statCards = [
     { 
-      title: 'Total Mobiles', 
+      title: t('dashboard.totalMobiles'), 
       value: stats.totalMobiles || 0, 
       icon: Smartphone, 
       color: 'text-blue-600', 
@@ -42,7 +60,7 @@ const Dashboard = () => {
       onClick: () => navigate('/admin/mobiles')
     },
     { 
-      title: 'Stolen Mobiles', 
+      title: t('dashboard.stolenMobiles'), 
       value: stats.totalStolenMobiles || 0, 
       icon: ShieldAlert, 
       color: 'text-red-600', 
@@ -50,7 +68,7 @@ const Dashboard = () => {
       onClick: () => navigate('/admin/stolen-mobiles')
     },
     { 
-      title: 'Stolen Mobile Detected', 
+      title: t('notifications.stolenTitle'), 
       value: stats.totalDetectedStolenMobiles || 0, 
       icon: AlertTriangle, 
       color: 'text-orange-600', 
@@ -58,7 +76,7 @@ const Dashboard = () => {
       onClick: () => navigate('/admin/detected-stolen-mobiles')
     },
     { 
-      title: 'Duplicate IMEI Detected', 
+      title: t('dashboard.duplicateImeiTitle'), 
       value: stats.duplicateIMEINotifications || 0, 
       icon: Copy, 
       color: 'text-purple-600', 
@@ -66,7 +84,7 @@ const Dashboard = () => {
       onClick: () => navigate('/admin/notifications')
     },
     { 
-      title: 'Total Customers', 
+      title: t('dashboard.totalCustomers'), 
       value: stats.totalCustomers || 0, 
       icon: Users, 
       color: 'text-green-600', 
@@ -74,7 +92,7 @@ const Dashboard = () => {
       onClick: () => navigate('/admin/customers')
     },
     { 
-      title: 'Total Users', 
+      title: t('dashboard.totalUsers'), 
       value: stats.totalUsers || 0, 
       icon: UserCheck, 
       color: 'text-indigo-600', 
@@ -82,7 +100,7 @@ const Dashboard = () => {
       onClick: () => navigate('/admin/users')
     },
     { 
-      title: 'Unread Notifications', 
+      title: t('dashboard.unreadNotifications'), 
       value: stats.unreadNotifications || 0, 
       icon: Bell, 
       color: 'text-yellow-600', 
@@ -90,8 +108,8 @@ const Dashboard = () => {
       onClick: () => navigate('/admin/notifications')
     },
     { 
-      title: 'System Health', 
-      value: 'Good', 
+      title: t('dashboard.systemHealth'), 
+      value: t('dashboard.good'), 
       icon: BarChart3, 
       color: 'text-emerald-600', 
       bg: 'bg-emerald-50',
@@ -102,8 +120,8 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Overview of your mobile registration system</p>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('dashboard.title')}</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Stats Cards */}
@@ -123,95 +141,65 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5 pt-0">
-              <div className="text-2xl font-bold">{card.value.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{typeof card.value === 'number' ? card.value.toLocaleString() : card.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Recent Detected Stolen Mobiles */}
-      <Card className="border shadow-none">
-        <CardHeader className="p-4 sm:p-6 pb-3">
-          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-            Recent Stolen Mobile Detections
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {recentDetectedStolenMobiles.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No stolen mobile detections yet</p>
-          ) : (
-            <div className="divide-y">
-              {recentDetectedStolenMobiles.map((detection) => (
-                <div key={detection.id} className="flex items-start sm:items-center justify-between px-4 sm:px-6 py-3 gap-2 sm:gap-3">
-                  <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                    <div className={cn('shrink-0 mt-0.5 sm:mt-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase', 'bg-red-100', 'text-red-700')}>
-                      STOLEN
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {detection.stolenMobile?.brand} {detection.stolenMobile?.model} → {detection.mobile?.brand} {detection.mobile?.model}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        Reporter: {detection.stolenMobile?.reporterName} · 
-                        IMEI: {detection.stolenMobile?.imei1} · 
-                        User: {detection.transaction?.user?.name || detection.transaction?.user?.email || '—'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                      {detection.detectedAt ? formatDistanceToNow(new Date(detection.detectedAt), { addSuffix: true }) : '—'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Charts COLUMN */}
+      <div className="space-y-6">
 
-      {/* Recent Duplicate IMEIs */}
-      <Card className="border shadow-none">
-        <CardHeader className="p-4 sm:p-6 pb-3">
-          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-            <Copy className="h-5 w-5 text-purple-500" />
-            Recent Duplicate IMEI Alerts
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {recentDuplicateIMEIs.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No duplicate IMEI alerts yet</p>
-          ) : (
-            <div className="divide-y">
-              {recentDuplicateIMEIs.map((notification) => (
-                <div key={notification.id} className="flex items-start sm:items-center justify-between px-4 sm:px-6 py-3 gap-2 sm:gap-3">
-                  <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                    <div className={cn('shrink-0 mt-0.5 sm:mt-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase', 'bg-purple-100', 'text-purple-700')}>
-                      DUPLICATE
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {notification.mobile?.brand} {notification.mobile?.model}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        IMEI: {notification.imei} · 
-                        Transactions: {notification.mobile?.transactions?.length || 0} · 
-                        Users: {[...new Set(notification.mobile?.transactions?.map(tx => tx.user?.name || tx.user?.email) || [])].join(', ')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                      {notification.createdAt ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true }) : '—'}
-                    </p>
-                  </div>
-                </div>
-              ))}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex gap-2">
+              <TrendingUp size={18} /> Activity
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <div className="h-[320px] w-full">
+              <ResponsiveContainer>
+                <ComposedChart data={formattedChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="monthLabel" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="mobilesRegistered" fill="#2563eb" />
+                  <Bar dataKey="customersAdded" fill="#16a34a" />
+                  <Line dataKey="transactions" stroke="#f97316" />
+                </ComposedChart>
+              </ResponsiveContainer>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex gap-2">
+              <ShieldAlert size={18} /> Alerts
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <div className="h-[320px] w-full">
+              <ResponsiveContainer>
+                <BarChart data={formattedChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="monthLabel" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="stolenDetections" fill="#dc2626" />
+                  <Bar dataKey="duplicateAlerts" fill="#f59e0b" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+      </div>
     </div>
   );
 };

@@ -5,13 +5,14 @@ import { Button } from '../../component/ui/button';
 import { Input } from '../../component/ui/input';
 import { Label } from '../../component/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../component/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../component/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../component/ui/dialog';
 import TablePagination from '../../component/ui/TablePagination';
 import { Search, Trash2, Filter, X, Eye, Pencil, Loader2, Smartphone, ShoppingCart, Tag, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 
 const LIMIT = 7;
 const EMPTY_FILTERS = { q: '', brand: '', model: '' };
@@ -23,6 +24,7 @@ const TX_META = {
 };
 
 export default function Mobiles() {
+  const { t } = useTranslation();
   const [mobiles, setMobiles]       = useState([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [page, setPage]             = useState(1);
@@ -56,7 +58,7 @@ export default function Mobiles() {
       setTotalPages(res.data.data?.pagination?.totalPages || 1);
       setTotal(res.data.data?.pagination?.total || 0);
     } catch {
-      toast.error('Failed to load mobiles');
+      toast.error(t('mobiles.failedLoad'));
       setMobiles([]);
     } finally {
       setIsLoading(false);
@@ -75,7 +77,7 @@ export default function Mobiles() {
       const res = await adminMobileService.getById(id);
       setDetail(res.data.data?.mobile ?? res.data.data ?? res.data);
     } catch {
-      toast.error('Failed to load mobile details');
+      toast.error(t('mobiles.failedDetail'));
     } finally {
       setDetailLoading(false);
     }
@@ -90,11 +92,11 @@ export default function Mobiles() {
     setIsSubmitting(true);
     try {
       await adminMobileService.update(selected.id, payload);
-      toast.success('Mobile updated');
+      toast.success(t('mobiles.updateSuccess'));
       setEditOpen(false);
       fetchMobiles(applied, page);
     } catch (err) {
-      toast.error(err.message || 'Failed to update mobile');
+      toast.error(err.message || t('mobiles.failedUpdate'));
     } finally {
       setIsSubmitting(false);
     }
@@ -103,68 +105,66 @@ export default function Mobiles() {
   const handleDelete = async () => {
     try {
       await adminMobileService.delete(selected.id);
-      toast.success('Mobile deleted');
+      toast.success(t('mobiles.deleteSuccess'));
       setDeleteOpen(false);
       setSelected(null);
       fetchMobiles(applied, page);
     } catch (err) {
-      toast.error(err.message || 'Failed to delete mobile');
+      toast.error(err.message || t('mobiles.failedDelete'));
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Mobiles</h2>
-        <p className="text-sm text-muted-foreground">All registered mobile devices — {total} total</p>
+        <h2 className="text-2xl font-bold tracking-tight">{t('mobiles.title')}</h2>
+        <p className="text-sm text-muted-foreground">{t('mobiles.subtitle')} — {total} {t('common.total')}</p>
       </div>
 
-      {/* Filters */}
       <div className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by IMEI..." className="pl-9" value={draft.q}
+            <Input placeholder={t('mobiles.searchPlaceholder')} className="pl-9" value={draft.q}
               onChange={(e) => setDraft((p) => ({ ...p, q: e.target.value }))}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()} />
           </div>
-          <Input placeholder="Filter by brand..." value={draft.brand}
+          <Input placeholder={t('mobiles.filterBrand')} value={draft.brand}
             onChange={(e) => setDraft((p) => ({ ...p, brand: e.target.value }))}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()} />
-          <Input placeholder="Filter by model..." value={draft.model}
+          <Input placeholder={t('mobiles.filterModel')} value={draft.model}
             onChange={(e) => setDraft((p) => ({ ...p, model: e.target.value }))}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button onClick={applyFilters} size="sm" className="gap-1.5"><Filter className="h-3.5 w-3.5" /> Apply</Button>
-          {hasActiveFilters && <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5"><X className="h-3.5 w-3.5" /> Clear</Button>}
+          <Button onClick={applyFilters} size="sm" className="gap-1.5"><Filter className="h-3.5 w-3.5" /> {t('mobiles.apply')}</Button>
+          {hasActiveFilters && <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5"><X className="h-3.5 w-3.5" /> {t('mobiles.clear')}</Button>}
           {hasActiveFilters && (
             <span className="text-xs text-muted-foreground">
-              {[applied.q && `IMEI: "${applied.q}"`, applied.brand && `Brand: "${applied.brand}"`, applied.model && `Model: "${applied.model}"`].filter(Boolean).join(' · ')}
+              {[applied.q && `${t('mobiles.imeiFilter')}: "${applied.q}"`, applied.brand && `${t('mobiles.brandFilter')}: "${applied.brand}"`, applied.model && `${t('mobiles.modelFilter')}: "${applied.model}"`].filter(Boolean).join(' · ')}
             </span>
           )}
         </div>
       </div>
 
-      {/* Table */}
       <div className="border rounded-lg bg-background overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Device</TableHead>
-              <TableHead>IMEI 1</TableHead>
-              <TableHead>IMEI 2</TableHead>
-              <TableHead>Color</TableHead>
-              <TableHead>RAM / Storage</TableHead>
-              <TableHead>Registered</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t('mobiles.device')}</TableHead>
+              <TableHead>{t('mobiles.imei1')}</TableHead>
+              <TableHead>{t('mobiles.imei2')}</TableHead>
+              <TableHead>{t('mobiles.color')}</TableHead>
+              <TableHead>{t('mobiles.ramStorage')}</TableHead>
+              <TableHead>{t('mobiles.registered')}</TableHead>
+              <TableHead className="text-right">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={7} className="p-0"><SectionLoader /></TableCell></TableRow>
             ) : mobiles.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No mobiles found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">{t('mobiles.noMobiles')}</TableCell></TableRow>
             ) : mobiles.map((mob) => (
               <TableRow key={mob.id}>
                 <TableCell>
@@ -189,9 +189,9 @@ export default function Mobiles() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50" onClick={() => openView(mob)} title="View"><Eye className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent" onClick={() => openEdit(mob)} title="Edit"><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => openDelete(mob)} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50" onClick={() => openView(mob)}><Eye className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent" onClick={() => openEdit(mob)}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => openDelete(mob)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -202,11 +202,9 @@ export default function Mobiles() {
 
       <TablePagination page={page} totalPages={totalPages} total={total} limit={LIMIT} onPageChange={setPage} />
 
-      {/* ── VIEW MODAL ──────────────────────────────────────────────────────── */}
+      {/* VIEW MODAL */}
       <Dialog open={viewOpen} onOpenChange={(o) => { setViewOpen(o); if (!o) { setDetail(null); setSelected(null); } }}>
         <DialogContent className="max-w-lg rounded-2xl p-0">
-
-          {/* Header */}
           <div className="flex items-center gap-3 px-6 py-5 border-b shrink-0">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Smartphone className="h-5 w-5 text-primary" />
@@ -221,7 +219,6 @@ export default function Mobiles() {
             </div>
           </div>
 
-          {/* Body */}
           <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
             {detailLoading ? (
               <div className="flex justify-center py-12">
@@ -229,19 +226,18 @@ export default function Mobiles() {
               </div>
             ) : detail ? (
               <>
-                {/* Device info */}
                 <section className="space-y-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Device Info</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t('mobiles.deviceInfo')}</p>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-3">
                     {[
-                      { label: 'IMEI 1',      value: detail.imei1,                                                    mono: true  },
-                      { label: 'IMEI 2',      value: detail.imei2,                                                    mono: true  },
-                      { label: 'Brand',       value: detail.brand                                                                 },
-                      { label: 'Model',       value: detail.model                                                                 },
-                      { label: 'Color',       value: detail.color                                                                 },
-                      { label: 'RAM',         value: detail.ram     ? `${detail.ram} GB`     : null                              },
-                      { label: 'Storage',     value: detail.storage ? `${detail.storage} GB` : null                              },
-                      { label: 'Registered',  value: detail.createdAt ? format(new Date(detail.createdAt), 'MMM dd, yyyy') : null },
+                      { label: t('mobiles.imei1'),    value: detail.imei1,                                                    mono: true  },
+                      { label: t('mobiles.imei2'),    value: detail.imei2,                                                    mono: true  },
+                      { label: t('mobiles.brand'),    value: detail.brand                                                                 },
+                      { label: t('mobiles.model'),    value: detail.model                                                                 },
+                      { label: t('mobiles.color'),    value: detail.color                                                                 },
+                      { label: t('mobiles.ram'),      value: detail.ram     ? `${detail.ram} GB`     : null                              },
+                      { label: t('mobiles.storage'),  value: detail.storage ? `${detail.storage} GB` : null                              },
+                      { label: t('mobiles.registered'), value: detail.createdAt ? format(new Date(detail.createdAt), 'MMM dd, yyyy') : null },
                     ].map(({ label, value, mono }) => (
                       <div key={label}>
                         <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
@@ -253,10 +249,9 @@ export default function Mobiles() {
 
                 <div className="border-t" />
 
-                {/* Transactions */}
                 <section className="space-y-3">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Transactions ({detail.transactions?.length ?? 0})
+                    {t('mobiles.transactions')} ({detail.transactions?.length ?? 0})
                   </p>
                   {detail.transactions?.length > 0 ? (
                     <div className="space-y-3">
@@ -265,7 +260,6 @@ export default function Mobiles() {
                         const TxIcon = meta.icon;
                         return (
                           <div key={tx.id ?? i} className="rounded-xl border bg-muted/20 p-4 space-y-3">
-                            {/* type + price */}
                             <div className="flex items-center justify-between gap-2">
                               <span className={cn('inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full', meta.cls)}>
                                 <TxIcon className="h-3 w-3" />{tx.type}
@@ -277,75 +271,68 @@ export default function Mobiles() {
                                 </p>
                               </div>
                             </div>
-                            {/* customer */}
                             {tx.customer ? (
                               <div className="grid grid-cols-2 gap-x-6 gap-y-2 pt-2 border-t">
                                 <div>
-                                  <p className="text-[10px] text-muted-foreground">Customer</p>
+                                  <p className="text-[10px] text-muted-foreground">{t('mobiles.customer')}</p>
                                   <p className="text-xs font-semibold">{tx.customer.firstName} {tx.customer.lastName}</p>
                                 </div>
                                 <div>
-                                  <p className="text-[10px] text-muted-foreground">Phone</p>
+                                  <p className="text-[10px] text-muted-foreground">{t('mobiles.phone')}</p>
                                   <p className="text-xs font-semibold">{tx.customer.phoneNumber || '—'}</p>
                                 </div>
                                 <div className="col-span-2">
-                                  <p className="text-[10px] text-muted-foreground">ID Card</p>
+                                  <p className="text-[10px] text-muted-foreground">{t('mobiles.idCard')}</p>
                                   <p className="text-xs font-semibold font-mono">{tx.customer.idCardNumber || '—'}</p>
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-xs text-muted-foreground italic pt-2 border-t">No customer linked</p>
+                              <p className="text-xs text-muted-foreground italic pt-2 border-t">{t('mobiles.noCustomerLinked')}</p>
                             )}
-                            {/* added by */}
                             {tx.user && (
                               <div className="grid grid-cols-2 gap-x-6 gap-y-2 pt-2 border-t">
                                 <div>
-                                  <p className="text-[10px] text-muted-foreground">Added By</p>
+                                  <p className="text-[10px] text-muted-foreground">{t('mobiles.addedBy')}</p>
                                   <p className="text-xs font-semibold">{tx.user.name || '—'}</p>
                                 </div>
                                 <div>
-                                  <p className="text-[10px] text-muted-foreground">Shop #</p>
+                                  <p className="text-[10px] text-muted-foreground">{t('mobiles.shopNo')}</p>
                                   <p className="text-xs font-semibold">{tx.user.shopNumber || '—'}</p>
-                                </div>
-                                <div className="col-span-2">
-                                  <p className="text-[10px] text-muted-foreground">Email</p>
-                                  <p className="text-xs font-semibold">{tx.user.email || '—'}</p>
                                 </div>
                               </div>
                             )}
                             {tx.notes && (
-                              <p className="text-xs text-muted-foreground italic border-t pt-2">Note: {tx.notes}</p>
+                              <p className="text-xs text-muted-foreground italic border-t pt-2">{t('mobiles.note')}: {tx.notes}</p>
                             )}
                           </div>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No transactions recorded.</p>
+                    <p className="text-sm text-muted-foreground">{t('mobiles.noTransactions')}</p>
                   )}
                 </section>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-10">No details available.</p>
+              <p className="text-sm text-muted-foreground text-center py-10">{t('mobiles.noDetails')}</p>
             )}
           </div>
 
-          {/* Footer */}
           <div className="px-6 py-4 border-t shrink-0 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setViewOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setViewOpen(false)}>{t('common.close')}</Button>
             <Button onClick={() => { setViewOpen(false); openEdit(selected); }}>
-              <Pencil className="h-4 w-4 mr-2" /> Edit
+              <Pencil className="h-4 w-4 mr-2" /> {t('common.edit')}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* ── EDIT MODAL ──────────────────────────────────────────────────────── */}
+      {/* EDIT MODAL */}
       <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setSelected(null); }}>
         <DialogContent className="max-w-md rounded-xl">
           <div className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b">
             <DialogHeader>
-              <DialogTitle>Edit Mobile</DialogTitle>
+              <DialogTitle>{t('mobiles.editMobile')}</DialogTitle>
               <DialogDescription>{selected?.brand} {selected?.model}</DialogDescription>
             </DialogHeader>
           </div>
@@ -353,58 +340,58 @@ export default function Mobiles() {
             <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Brand *</Label>
-                  <Input {...register('brand', { required: 'Required' })} className={cn(errors.brand && 'border-destructive')} />
+                  <Label>{t('mobiles.brandLabel')}</Label>
+                  <Input {...register('brand', { required: t('common.required') })} className={cn(errors.brand && 'border-destructive')} />
                   {errors.brand && <p className="text-xs text-destructive">{errors.brand.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Model *</Label>
-                  <Input {...register('model', { required: 'Required' })} className={cn(errors.model && 'border-destructive')} />
+                  <Label>{t('mobiles.modelLabel')}</Label>
+                  <Input {...register('model', { required: t('common.required') })} className={cn(errors.model && 'border-destructive')} />
                   {errors.model && <p className="text-xs text-destructive">{errors.model.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Color *</Label>
-                  <Input {...register('color', { required: 'Required' })} className={cn(errors.color && 'border-destructive')} />
+                  <Label>{t('mobiles.colorLabel')}</Label>
+                  <Input {...register('color', { required: t('common.required') })} className={cn(errors.color && 'border-destructive')} />
                   {errors.color && <p className="text-xs text-destructive">{errors.color.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>RAM (GB)</Label>
-                  <Input {...register('ram')} type="number" min="1" placeholder="e.g. 8" />
+                  <Label>{t('mobiles.ramLabel')}</Label>
+                  <Input {...register('ram')} type="number" min="1" placeholder={t('mobiles.ramPlaceholder')} />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Storage (GB)</Label>
-                  <Input {...register('storage')} type="number" min="1" placeholder="e.g. 256" />
+                  <Label>{t('mobiles.storageLabel')}</Label>
+                  <Input {...register('storage')} type="number" min="1" placeholder={t('mobiles.storagePlaceholder')} />
                 </div>
               </div>
             </div>
             <div className="shrink-0 px-4 sm:px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setEditOpen(false)}>{t('common.cancel')}</Button>
               <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
+                {t('common.saveChanges')}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* ── DELETE MODAL ────────────────────────────────────────────────────── */}
+      {/* DELETE MODAL */}
       <Dialog open={deleteOpen} onOpenChange={(o) => { setDeleteOpen(o); if (!o) setSelected(null); }}>
         <DialogContent className="max-w-md rounded-xl">
           <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
             <DialogHeader>
-              <DialogTitle>Delete Mobile</DialogTitle>
+              <DialogTitle>{t('mobiles.deleteMobile')}</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete{' '}
+                {t('mobiles.deleteConfirm')}{' '}
                 <span className="font-semibold text-foreground">{selected?.brand} {selected?.model}</span>{' '}
-                (IMEI: <span className="font-mono">{selected?.imei1}</span>)?
-                This will also remove all associated transactions and cannot be undone.
+                ({t('mobiles.deleteImei')}: <span className="font-mono">{selected?.imei1}</span>)?
+                {' '}{t('mobiles.deleteWarning')}
               </DialogDescription>
             </DialogHeader>
           </div>
           <div className="px-4 sm:px-6 pb-4 sm:pb-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => { setDeleteOpen(false); setSelected(null); }}>Cancel</Button>
-            <Button variant="destructive" className="w-full sm:w-auto" onClick={handleDelete}>Delete</Button>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => { setDeleteOpen(false); setSelected(null); }}>{t('common.cancel')}</Button>
+            <Button variant="destructive" className="w-full sm:w-auto" onClick={handleDelete}>{t('common.delete')}</Button>
           </div>
         </DialogContent>
       </Dialog>

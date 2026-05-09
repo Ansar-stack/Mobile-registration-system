@@ -7,8 +7,10 @@ import { Input } from '../../component/ui/input';
 import { Label } from '../../component/ui/label';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const ResetPassword = () => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -18,16 +20,16 @@ const ResetPassword = () => {
 
   const onSubmit = async (data) => {
     if (!token) {
-      toast.error('Invalid or missing reset token');
+      toast.error(t('resetPassword.invalidToken'));
       return;
     }
     setIsLoading(true);
     try {
       await authService.resetPassword(data.password, token);
-      toast.success('Password reset successful. You can now login.');
+      toast.success(t('resetPassword.resetSuccess'));
       navigate('/login');
     } catch (error) {
-      toast.error(error.message || 'Failed to reset password');
+      toast.error(error.message || t('resetPassword.failedReset'));
     } finally {
       setIsLoading(false);
     }
@@ -37,19 +39,19 @@ const ResetPassword = () => {
     <div className="space-y-6">
       <div className="text-center">
         <p className="text-sm text-muted-foreground">
-          Enter your new password below.
+          {t('resetPassword.header')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="password">New Password</Label>
+          <Label htmlFor="password">{t('resetPassword.newPassword')}</Label>
           <Input
             id="password"
             type="password"
-            {...register('password', { 
-              required: 'Password is required',
-              minLength: { value: 8, message: 'Password must be at least 8 characters' }
+            {...register('password', {
+              required: t('resetPassword.passwordRequired'),
+              minLength: { value: 8, message: t('resetPassword.passwordMin') },
             })}
             className={errors.password ? 'border-destructive' : ''}
           />
@@ -57,17 +59,13 @@ const ResetPassword = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Label htmlFor="confirmPassword">{t('resetPassword.confirmPassword')}</Label>
           <Input
             id="confirmPassword"
             type="password"
-            {...register('confirmPassword', { 
-              required: 'Please confirm your password',
-              validate: (val) => {
-                if (watch('password') !== val) {
-                  return "Passwords do not match";
-                }
-              },
+            {...register('confirmPassword', {
+              required: t('resetPassword.confirmRequired'),
+              validate: (val) => watch('password') === val || t('resetPassword.passwordMismatch'),
             })}
             className={errors.confirmPassword ? 'border-destructive' : ''}
           />
@@ -76,17 +74,14 @@ const ResetPassword = () => {
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Reset Password
+          {t('resetPassword.resetBtn')}
         </Button>
       </form>
 
       <div className="text-center">
-        <Link
-          to="/login"
-          className="text-sm font-medium text-muted-foreground hover:text-primary inline-flex items-center gap-2"
-        >
+        <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-primary inline-flex items-center gap-2">
           <ArrowLeft className="h-4 w-4" />
-          Back to login
+          {t('resetPassword.backToLogin')}
         </Link>
       </div>
     </div>

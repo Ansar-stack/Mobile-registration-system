@@ -131,14 +131,14 @@ function StepMobile({ form, onNext }) {
         </Field>
         <Field label={t('entry.ram')} error={errors.ram?.message}>
           <Input
-            {...register('ram', { min: { value: 1, message: 'RAM must be at least 1 GB' }, max: { value: 256, message: 'RAM value seems too high' } })}
+            {...register('ram', { min: { value: 1, message: t('stolen.ramMin') }, max: { value: 256, message: t('stolen.ramMax') } })}
             type="number" inputMode="numeric" min="1" max="256" placeholder={t('entry.ramPlaceholder')}
             className={cn('h-11', errors.ram && 'border-destructive')}
           />
         </Field>
         <Field label={t('entry.storage')} error={errors.storage?.message}>
           <Input
-            {...register('storage', { min: { value: 1, message: 'Storage must be at least 1 GB' }, max: { value: 4096, message: 'Storage value seems too high' } })}
+            {...register('storage', { min: { value: 1, message: t('stolen.storageMin') }, max: { value: 4096, message: t('stolen.storageMax') } })}
             type="number" inputMode="numeric" min="1" max="4096" placeholder={t('entry.storagePlaceholder')}
             className={cn('h-11', errors.storage && 'border-destructive')}
           />
@@ -204,8 +204,8 @@ function StepTransaction({ form, onNext, onBack }) {
         <Field label={t('entry.price')} error={errors.price?.message}>
           <Input
             {...register('price', {
-              min: { value: 0, message: 'Price cannot be negative' },
-              max: { value: 10000000, message: 'Price seems too high' },
+              min: { value: 0, message: t('entry.priceMin') },
+              max: { value: 10000000, message: t('entry.priceMax') },
             })}
             type="number" inputMode="decimal" min="0" step="0.01" placeholder={t('entry.pricePlaceholder')}
             className={cn('h-11 text-base', errors.price && 'border-destructive')}
@@ -294,7 +294,7 @@ function StepCustomer({ form, onBack, onSubmit, isLoading }) {
           <Input
             {...register('phoneNumber', {
               required: req(t('entry.phoneReq')),
-              pattern: { value: /^[+]?[0-9\s\-()]{7,15}$/, message: t('entry.phonePattern') },
+              pattern: { value: /^(?:\+93|0093|0)7[0-9]{8}$|^\+93[0-9]{9}$/, message: t('entry.phonePattern') },
             })}
             type="tel" inputMode="tel"
             className={cn('h-11', errors.phoneNumber && 'border-destructive')}
@@ -327,7 +327,7 @@ function StepCustomer({ form, onBack, onSubmit, isLoading }) {
             placeholder={t('entry.province')}
             hasError={!!errors.p_province}
           />
-          <Input {...register('p_city', { required: !isSell })} placeholder={t('entry.city')}
+          <Input {...register('p_city', { required: isSell ? false : 'City is required' })} placeholder={t('entry.city')}
             className={cn('h-10', errors.p_city && 'border-destructive')} />
           <DistrictInput
             value={watch('p_district') || ''}
@@ -385,7 +385,7 @@ export default function CreateEntry() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [recentEntries, setRecentEntries] = useState([]);
-  const [isFetchingEntries, setIsFetchingEntries] = useState(true);
+  const [isFetchingEntries, setIsFetchingEntries] = useState(false);
 
   const form = useForm({ defaultValues: { transactionType: 'BUY', gender: 'male' } });
 
@@ -482,7 +482,7 @@ export default function CreateEntry() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('entry.customer')}</TableHead>
+                <TableHead>Full Name</TableHead>
                 <TableHead>{t('entry.mobile')}</TableHead>
                 <TableHead>{t('entry.type')}</TableHead>
                 <TableHead>{t('entry.priceCol')}</TableHead>
@@ -506,7 +506,7 @@ export default function CreateEntry() {
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium">
                     {entry.customer
-                      ? `${entry.customer.firstName} ${entry.customer.lastName}`
+                      ? `${entry.customer.firstName} ${entry.customer.lastName}`.trim()
                       : <span className="text-muted-foreground italic text-xs">{t('entry.noCustomer')}</span>}
                   </TableCell>
                   <TableCell>{entry.mobile?.brand} {entry.mobile?.model}</TableCell>
