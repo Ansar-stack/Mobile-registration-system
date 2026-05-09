@@ -32,7 +32,17 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const [user] = await db.select().from(users).where(eq(users.email, email));
+  console.log('Login attempt for:', email);
+
+  let user;
+  try {
+    [user] = await db.select().from(users).where(eq(users.email, email));
+    console.log('User found:', user ? 'Yes' : 'No');
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  }
+
   if (!user) return res.respond(400, req.t("auth.userNotFound"));
 
   const match = await comparePassword(password, user.password);
