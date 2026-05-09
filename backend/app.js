@@ -7,25 +7,11 @@ import router from './src/routes/routes.js';
 import { responseMiddleware } from './src/middlewares/response.middleware.js';
 import { ErrorMiddlware } from './src/middlewares/error.middleware.js';
 import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
 import logger, { morganStream } from './logs/logger.js';
 import hpp from 'hpp';
 import { t } from './src/utils/i18n.util.js';
 
 const app = express();
-
-// Helmet for security headers
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }, 
-     directives: {
-      defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"]
-    }
-  })
-);
 
 app.use(express.json());
 
@@ -48,15 +34,17 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Cross origin
-const frontendURLs = [
-  "https://register-mobile.vercel.app"
-];
-const a = 324;
+const allowedOrigins = [
+  "https://register-mobile.vercel.app",
+  process.env.FRONTEND_URL,
+  process.env.RENDER_EXTERNAL_URL,
+].filter(Boolean);
+
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || frontendURLs.includes(origin)) {
-            return callback(null, true);
-        }
+        // Allow requests with no origin (Postman, mobile apps, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
