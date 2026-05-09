@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1777698899761,
+      "tag": "0000_gray_white_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777707161772,
+      "tag": "0001_lean_puff_adder",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777955663098,
+      "tag": "0002_yummy_la_nuit",
+      "breakpoints": true
+    }
+  ]
+}
