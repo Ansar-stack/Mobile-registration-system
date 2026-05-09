@@ -9,7 +9,6 @@ import { Label } from '../../component/ui/label';
 import { ShieldAlert, Search, Filter, X, Eye, Trash2, Phone, User, Calendar, Smartphone, Receipt, BarChart3 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
-import  from '../../component/ui/';
 import { useTranslation } from 'react-i18next';
 
 const DetectedStolenMobiles = () => {
@@ -311,7 +310,7 @@ const DetectedStolenMobiles = () => {
         </div>
         {detectedStolenMobiles.length > 0 && (
           <div className="border-t px-4 py-3">
-            < currentPage={pagination.page} totalPages={pagination.totalPages} totalItems={pagination.total} itemsPerPage={pagination.limit} onPageChange={handlePageChange} />
+            <TablePagination currentPage={pagination.page} totalPages={pagination.totalPages} totalItems={pagination.total} itemsPerPage={pagination.limit} onPageChange={handlePageChange} />
           </div>
         )}
       </div>
