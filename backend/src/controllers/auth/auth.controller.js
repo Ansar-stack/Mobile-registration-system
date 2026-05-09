@@ -52,6 +52,11 @@ export const login = asyncHandler(async (req, res) => {
   await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
 
   const accessToken = accessTokenGenerator({ id: user.id });
+  
+  console.log('Setting cookies for user:', user.email);
+  console.log('Access token length:', accessToken.length);
+  console.log('Refresh token length:', refreshToken.length);
+  
   sentCookie("accessToken", res, accessToken);
   sentCookie("refreshToken", res, refreshToken);
 

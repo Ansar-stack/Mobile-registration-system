@@ -36,6 +36,8 @@ app.use(limiter);
 // Cross origin
 const allowedOrigins = [
   "https://register-mobile.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
   process.env.FRONTEND_URL,
   process.env.RENDER_EXTERNAL_URL,
 ].filter(Boolean);
@@ -45,14 +47,17 @@ const corsOptions = {
         // Allow requests with no origin (Postman, mobile apps, server-to-server)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
+        console.log('CORS blocked origin:', origin);
         return callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
+    exposedHeaders: ['Set-Cookie'],
 };
 
 app.use(cors(corsOptions));
-app.options('/{*any}', cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // configure the hpp middleware to prevent HTTP Parameter Pollution
 app.use(hpp());
@@ -138,6 +143,22 @@ app.get("/debug-users", async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message, stack: error.stack });
   }
+});
+
+// Debug endpoint to check cookies (REMOVE AFTER USE)
+app.get("/debug-cookies", (req, res) => {
+  res.json({
+    success: true,
+    cookies: req.cookies,
+    headers: {
+      origin: req.headers.origin,
+      cookie: req.headers.cookie
+    },
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      FRONTEND_URL: process.env.FRONTEND_URL
+    }
+  });
 });
 
 // Router 

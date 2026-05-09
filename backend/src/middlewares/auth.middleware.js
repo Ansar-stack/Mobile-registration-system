@@ -5,23 +5,42 @@ import { verifyAccessToken, verifyAndRotateRefreshToken } from "../utils/verifyT
 
 export const authMiddleware = async (req, res, next) => {
   const { accessToken, refreshToken } = req.cookies;
-  if (!accessToken || !refreshToken) return res.respond(401, req.t("middleware.unauthorized"));
+  
+  console.log('Auth middleware - Cookies received:', {
+    hasAccessToken: !!accessToken,
+    hasRefreshToken: !!refreshToken,
+    origin: req.headers.origin
+  });
+  
+  if (!accessToken || !refreshToken) {
+    console.log('Auth failed: Missing tokens');
+    return res.respond(401, req.t("middleware.unauthorized"));
+  }
 
   const verifyToken = verifyAccessToken(accessToken);
   if (verifyToken.valid) {
     const [user] = await db.select().from(users).where(eq(users.id, verifyToken.decoded.id));
-    if (!user) return res.respond(401, req.t("middleware.unauthorized"));
+    if (!user) {
+      console.log('Auth failed: User not found');
+      return res.respond(401, req.t("middleware.unauthorized"));
+    }
     req.user = user;
+    console.log('Auth success: User', user.email);
     return next();
   }
 
   if (!verifyToken.valid && verifyToken.expired) {
     if (!refreshToken) return res.respond(401, req.t("middleware.unauthorized"));
     const refreshVerification = await verifyAndRotateRefreshToken(refreshToken);
-    if (!refreshVerification.valid) return res.respond(401, req.t("middleware.unauthorized"));
+    if (!refreshVerification.valid) {
+      console.log('Auth failed: Invalid refresh token');
+      return res.respond(401, req.t("middleware.unauthorized"));
+    }
     req.user = refreshVerification.user;
+    console.log('Auth success via refresh: User', refreshVerification.user.email);
     return next();
   }
 
+  console.log('Auth failed: Token invalid');
   return res.respond(401, req.t("middleware.unauthorized"));
 };
