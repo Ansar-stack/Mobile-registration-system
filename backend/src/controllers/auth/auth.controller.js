@@ -22,10 +22,18 @@ export const register = asyncHandler(async (req, res) => {
   await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
 
   const accessToken = accessTokenGenerator({ id: user.id });
+  
+  // Set cookies (for same-origin requests)
   sentCookie("accessToken", res, accessToken);
   sentCookie("refreshToken", res, refreshToken);
 
-  res.respond(201, req.t("auth.registered"), { id: user.id, role: user.role });
+  // Also send tokens in response body (for cross-origin requests)
+  res.respond(201, req.t("auth.registered"), { 
+    id: user.id, 
+    role: user.role,
+    accessToken,
+    refreshToken
+  });
 });
 
 // Login
