@@ -49,7 +49,7 @@ app.use(limiter);
 
 // Cross origin
 const frontendURLs = [
-  "https://regiter-mobile.vercel.app"
+  "https://register-mobile.vercel.app/"
 ];
 const a = 324;
 const corsOptions = {
