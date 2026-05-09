@@ -28,12 +28,6 @@ const ForgotPassword = () => {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          {t('forgotPassword.header')}
-        </p>
-      </div>
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">{t('forgotPassword.emailLabel')}</Label>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Smartphone, ShieldAlert, Bell, LogOut,
@@ -21,6 +21,7 @@ const Sidebar = ({ role }) => {
   const { logout, user } = useAuth();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ps';
+  const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -40,12 +41,8 @@ const Sidebar = ({ role }) => {
     const fetchUnread = async () => {
       if (location.pathname === '/admin/notifications') { setUnreadCount(0); return; }
       try {
-        const res = await notificationService.getAll();
-        const raw = res?.data?.data;
-        const count = typeof raw?.unreadCount === 'number'
-          ? raw.unreadCount
-          : (Array.isArray(raw?.notifications) ? raw.notifications.filter((n) => !n.isRead).length : 0);
-        setUnreadCount(count);
+        const res = await notificationService.getAll({ limit: 1, isRead: false });
+        setUnreadCount(res?.data?.data?.unreadCount ?? 0);
       } catch {}
     };
     fetchUnread();
@@ -194,7 +191,7 @@ const Sidebar = ({ role }) => {
                 <div className="border-t" />
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={async () => { await logout(); navigate('/login', { replace: true }); }}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-red-50 hover:text-red-600 transition-colors text-left text-red-500"
                 >
                   <LogOut className="h-4 w-4" />

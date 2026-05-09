@@ -37,12 +37,6 @@ const ResetPassword = () => {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          {t('resetPassword.header')}
-        </p>
-      </div>
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="password">{t('resetPassword.newPassword')}</Label>
