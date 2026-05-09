@@ -49,11 +49,8 @@ app.use(limiter);
 
 // Cross origin
 const frontendURLs = [
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    "http://localhost:5173"
+    "https://regiter-mobile.vercel.app/", 
+    "https://register-mobile.vercel.app"
 ];
 const a = 324;
 const corsOptions = {
