@@ -60,6 +60,41 @@ app.use(hpp());
 // Response Middleware for res.respond()
 app.use(responseMiddleware);
 
+// Health check
+app.get("/health", async (req, res) => {
+  let dbStatus = "ok";
+  let dbError = null;
+
+  try {
+    const { createClient } = await import("@libsql/client");
+    const isLocal = process.env.DB_MODE === "local";
+    const client = createClient(
+      isLocal
+        ? { url: process.env.LOCAL_DATABASE_URL }
+        : { url: process.env.DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN }
+    );
+    await client.execute("SELECT 1");
+  } catch (err) {
+    dbStatus = "error";
+    dbError = err.message;
+  }
+
+  const healthy = dbStatus === "ok";
+  res.status(healthy ? 200 : 503).json({
+    success: healthy,
+    status: healthy ? 200 : 503,
+    message: healthy ? "Server is running" : "Database connection failed",
+    environment: process.env.NODE_ENV || "development",
+    db: {
+      mode: process.env.DB_MODE || "local",
+      status: dbStatus,
+      ...(dbError && { error: dbError }),
+    },
+    timestamp: new Date().toISOString(),
+    uptime: `${Math.floor(process.uptime())}s`,
+  });
+});
+
 // Router 
 app.use("/api/v1", router);
 
