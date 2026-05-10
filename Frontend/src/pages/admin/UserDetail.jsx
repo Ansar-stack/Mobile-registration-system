@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminUserService } from '../../services';
 import { SectionLoader } from '../../component/Loader';
 import { Button } from '../../component/ui/button';
-import { Input } from '../../component/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../component/ui/table';
 import TablePagination from '../../component/ui/TablePagination';
-import { ArrowLeft, Smartphone, Users, ArrowLeftRight, Search, ShoppingCart, Tag, Unlock } from 'lucide-react';
+import { ArrowLeft, Smartphone, Users, ArrowLeftRight, ShoppingCart, Tag, Unlock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -40,16 +39,11 @@ export default function UserDetail() {
   const [mobPage,       setMobPage]       = useState(1);
   const [mobTotal,      setMobTotal]      = useState(0);
   const [mobTotalPages, setMobTotalPages] = useState(1);
-  const [mobSearch,     setMobSearch]     = useState('');
-  const mobDebounce = useRef(null);
-
   const [customers,       setCustomers]     = useState([]);
   const [custLoading,     setCustLoading]   = useState(false);
   const [custPage,        setCustPage]      = useState(1);
   const [custTotal,       setCustTotal]     = useState(0);
   const [custTotalPages,  setCustTotalPages] = useState(1);
-  const [custSearch,      setCustSearch]    = useState('');
-  const custDebounce = useRef(null);
 
   const [transactions,  setTransactions]  = useState([]);
   const [txLoading,     setTxLoading]     = useState(false);
@@ -73,10 +67,10 @@ export default function UserDetail() {
     load();
   }, [id]);
 
-  const fetchMobiles = useCallback(async (pg = 1, q = mobSearch) => {
+  const fetchMobiles = useCallback(async (pg = 1) => {
     setMobLoading(true);
     try {
-      const res = await adminUserService.getUserMobiles(id, { page: pg, limit: LIMIT, ...(q && { q }) });
+      const res = await adminUserService.getUserMobiles(id, { page: pg, limit: LIMIT });
       const raw = res.data.data;
       setMobiles(raw?.mobiles || []);
       setMobTotal(raw?.pagination?.total || 0);
@@ -84,10 +78,10 @@ export default function UserDetail() {
     } catch { setMobiles([]); } finally { setMobLoading(false); }
   }, [id]);
 
-  const fetchCustomers = useCallback(async (pg = 1, q = custSearch) => {
+  const fetchCustomers = useCallback(async (pg = 1) => {
     setCustLoading(true);
     try {
-      const res = await adminUserService.getUserCustomers(id, { page: pg, limit: LIMIT, ...(q && { q }) });
+      const res = await adminUserService.getUserCustomers(id, { page: pg, limit: LIMIT });
       const raw = res.data.data;
       setCustomers(raw?.customers || []);
       setCustTotal(raw?.pagination?.total || 0);
@@ -106,28 +100,19 @@ export default function UserDetail() {
     } catch { setTransactions([]); } finally { setTxLoading(false); }
   }, [id]);
 
-  const tabMounted = useRef({ mobiles: false, customers: false, transactions: false });
+  useEffect(() => {
+    fetchMobiles(1);
+    fetchCustomers(1);
+    fetchTransactions(1);
+  }, []);
 
   useEffect(() => {
-    if (activeTab === 'mobiles')      fetchMobiles(1, '');
-    if (activeTab === 'customers')    fetchCustomers(1, '');
     if (activeTab === 'transactions') fetchTransactions(1, '');
   }, [activeTab]);
 
-  useEffect(() => {
-    if (!tabMounted.current.mobiles) { tabMounted.current.mobiles = true; return; }
-    if (activeTab === 'mobiles') fetchMobiles(mobPage);
-  }, [mobPage]);
-
-  useEffect(() => {
-    if (!tabMounted.current.customers) { tabMounted.current.customers = true; return; }
-    if (activeTab === 'customers') fetchCustomers(custPage);
-  }, [custPage]);
-
-  useEffect(() => {
-    if (!tabMounted.current.transactions) { tabMounted.current.transactions = true; return; }
-    if (activeTab === 'transactions') fetchTransactions(txPage);
-  }, [txPage]);
+  useEffect(() => { fetchMobiles(mobPage); }, [mobPage]);
+  useEffect(() => { fetchCustomers(custPage); }, [custPage]);
+  useEffect(() => { fetchTransactions(txPage); }, [txPage]);
 
   if (userLoading) return <SectionLoader />;
 
@@ -181,15 +166,6 @@ export default function UserDetail() {
       {/* Mobiles Tab */}
       {activeTab === 'mobiles' && (
         <div className="space-y-4">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={mobSearch} placeholder={t('userDetail.searchMobiles')} className="pl-9"
-              onChange={(e) => {
-                setMobSearch(e.target.value); setMobPage(1);
-                clearTimeout(mobDebounce.current);
-                mobDebounce.current = setTimeout(() => fetchMobiles(1, e.target.value), 400);
-              }} />
-          </div>
           <div className="border rounded-lg bg-background overflow-x-auto">
             <Table>
               <TableHeader>
@@ -234,15 +210,6 @@ export default function UserDetail() {
       {/* Customers Tab */}
       {activeTab === 'customers' && (
         <div className="space-y-4">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={custSearch} placeholder={t('userDetail.searchCustomers')} className="pl-9"
-              onChange={(e) => {
-                setCustSearch(e.target.value); setCustPage(1);
-                clearTimeout(custDebounce.current);
-                custDebounce.current = setTimeout(() => fetchCustomers(1, e.target.value), 400);
-              }} />
-          </div>
           <div className="border rounded-lg bg-background overflow-x-auto">
             <Table>
               <TableHeader>
