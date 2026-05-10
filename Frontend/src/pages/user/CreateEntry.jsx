@@ -261,7 +261,7 @@ function StepCustomer({ form, onBack, onSubmit, isLoading }) {
             {...register('firstName', {
               required: req(t('entry.firstNameReq')),
               minLength: { value: 2, message: t('entry.firstNameMin') },
-              pattern: { value: /^[A-Za-z\s'-]+$/, message: t('entry.firstNamePattern') },
+              pattern: { value: /^[A-Za-z\u0600-\u06FF\s'-]+$/, message: t('entry.firstNamePattern') },
             })}
             className={cn('h-11', errors.firstName && 'border-destructive')}
             placeholder="e.g. Ahmad"
@@ -272,7 +272,7 @@ function StepCustomer({ form, onBack, onSubmit, isLoading }) {
             {...register('lastName', {
               required: req(t('entry.lastNameReq')),
               minLength: { value: 2, message: t('entry.lastNameMin') },
-              pattern: { value: /^[A-Za-z\s'-]+$/, message: t('entry.lastNamePattern') },
+              pattern: { value: /^[A-Za-z\u0600-\u06FF\s'-]+$/, message: t('entry.lastNamePattern') },
             })}
             className={cn('h-11', errors.lastName && 'border-destructive')}
             placeholder="e.g. Khan"

@@ -251,7 +251,7 @@ const StolenMobiles = () => {
                     {...register('reporterName', {
                       required: t('stolen.reporterNameRequired'),
                       minLength: { value: 2, message: t('stolen.reporterNameMin') },
-                      pattern: { value: /^[A-Za-z\s'-]+$/, message: t('stolen.reporterNamePattern') },
+                      pattern: { value: /^[A-Za-z\u0600-\u06FF\s'-]+$/, message: t('stolen.reporterNamePattern') },
                     })}
                     placeholder={t('stolen.reporterNamePlaceholder')}
                     className={cn(errors.reporterName && 'border-destructive')}

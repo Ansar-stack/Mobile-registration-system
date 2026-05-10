@@ -219,7 +219,7 @@ const Users = () => {
                 <Input
                   {...register('name', {
                     minLength: { value: 2, message: t('users.nameMin') },
-                    pattern: { value: /^[A-Za-z\s'-]+$/, message: t('users.namePattern') },
+                    pattern: { value: /^[A-Za-z\u0600-\u06FF\s'-]+$/, message: t('users.namePattern') },
                   })}
                   placeholder={t('users.namePlaceholder')}
                   className={cn(errors.name && 'border-destructive')}
