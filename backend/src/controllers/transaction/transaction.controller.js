@@ -40,11 +40,11 @@ export const getMyTransactions = asyncHandler(async (req, res) => {
 
   // IMEI / mobile search via q param
   if (req.query.q) {
-    const t = `%${req.query.q.trim()}%`;
+    const term = `%${req.query.q.trim()}%`;
     const matchingMobiles = await db
       .select({ id: mobiles.id })
       .from(mobiles)
-      .where(or(like(mobiles.imei1, t), like(mobiles.imei2, t), like(mobiles.brand, t), like(mobiles.model, t)));
+      .where(or(like(mobiles.imei1, term), like(mobiles.imei2, term), like(mobiles.brand, term), like(mobiles.model, term)));
     const ids = matchingMobiles.map((m) => m.id);
     if (!ids.length) return res.respond(200, req.t("transaction.fetched"), { transactions: [], pagination: { total: 0, page, limit, totalPages: 0 } });
     filters.push(inArray(transactions.mobileId, ids));

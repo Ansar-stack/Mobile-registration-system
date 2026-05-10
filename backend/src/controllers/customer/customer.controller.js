@@ -26,8 +26,8 @@ export const getMyCustomers = asyncHandler(async (req, res) => {
   if (idCardNumber) filters.push(like(customers.idCardNumber, `%${idCardNumber.trim()}%`));
   if (phoneNumber)  filters.push(like(customers.phoneNumber,  `%${phoneNumber.trim()}%`));
   if (q) {
-    const t = `%${q.trim()}%`;
-    filters.push(or(like(customers.firstName, t), like(customers.lastName, t), like(customers.idCardNumber, t), like(customers.phoneNumber, t)));
+    const term = `%${q.trim()}%`;
+    filters.push(or(like(customers.firstName, term), like(customers.lastName, term), like(customers.idCardNumber, term), like(customers.phoneNumber, term)));
   }
   const where = and(...filters);
 

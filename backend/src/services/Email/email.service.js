@@ -6,7 +6,7 @@ export async function sendPasswordResetEmail(toEmail, resetLink) {
       service_id: process.env.SERVICE_ID,
       template_id: process.env.TEMPLATE_ID,
       user_id: process.env.PUBLIC_KEY,
-      accessToken: process.env.PRIVATE_KEY,
+      private_key: process.env.PRIVATE_KEY,
       template_params: {
         to_email: toEmail,
         reset_link: resetLink,

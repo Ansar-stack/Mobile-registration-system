@@ -56,7 +56,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('/{*path}', cors(corsOptions));
 
 // configure the hpp middleware to prevent HTTP Parameter Pollution
 app.use(hpp());

@@ -51,7 +51,8 @@ export const login = asyncHandler(async (req, res) => {
 // Logout
 export const logout = asyncHandler(async (req, res) => {
   await db.update(users).set({ refreshToken: null }).where(eq(users.id, req.user.id));
-  const clearOptions = { httpOnly: true, secure: true, sameSite: "none", path: "/" };
+  const isProd = process.env.NODE_ENV === "production";
+  const clearOptions = { httpOnly: true, secure: isProd, sameSite: isProd ? "none" : "lax", path: "/" };
   res.clearCookie("accessToken", clearOptions);
   res.clearCookie("refreshToken", clearOptions);
   res.respond(200, req.t("auth.loggedOut"));
@@ -72,12 +73,14 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   const [user] = await db.select().from(users).where(eq(users.email, email));
-  if (!user) return res.respond(400, req.t("auth.emailNotFound"));
 
-  const token = accessTokenGenerator({ id: user.id }, "15m");
-  const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${token}`;
+  // Always respond the same way to prevent user enumeration
+  if (user) {
+    const token = accessTokenGenerator({ id: user.id }, "15m");
+    const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${token}`;
+    await sendPasswordResetEmail(email, resetLink);
+  }
 
-  await sendPasswordResetEmail(email, resetLink);
   res.respond(200, req.t("auth.resetLinkSent"));
 });
 

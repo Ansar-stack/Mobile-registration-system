@@ -33,8 +33,8 @@ export const getMyMobiles = asyncHandler(async (req, res) => {
   if (model) filters.push(like(mobiles.model, `%${model.trim()}%`));
   if (color) filters.push(like(mobiles.color, `%${color.trim()}%`));
   if (q) {
-    const t = `%${q.trim()}%`;
-    filters.push(or(like(mobiles.imei1, t), like(mobiles.imei2, t), like(mobiles.brand, t), like(mobiles.model, t), like(mobiles.color, t)));
+    const term = `%${q.trim()}%`;
+    filters.push(or(like(mobiles.imei1, term), like(mobiles.imei2, term), like(mobiles.brand, term), like(mobiles.model, term), like(mobiles.color, term)));
   }
 
   const mobileFilter = filters.length ? and(...filters) : undefined;

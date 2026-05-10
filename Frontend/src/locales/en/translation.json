@@ -26,7 +26,7 @@
   },
   "auth": {
     "signIn": "Sign In",
-    "systemName": "Mobile Registry System",
+    "systemName": "Kandahar Mobile Registration System",
     "email": "Email",
     "emailPlaceholder": "name@gmail.com",
     "password": "Password",

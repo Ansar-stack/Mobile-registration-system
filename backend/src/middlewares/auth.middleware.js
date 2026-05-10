@@ -7,8 +7,9 @@ import { sentCookie } from "../utils/sentCookie.util.js";
 
 export const authMiddleware = async (req, res, next) => {
   const { accessToken, refreshToken } = req.cookies;
-  console.log("Tokens", acceessToken, refreshToken);
-  if (!accessToken || !refreshToken) {
+  console.log(`[Auth] ${req.method} ${req.originalUrl} | accessToken=${accessToken ? accessToken.slice(0, 20) + "..." : "MISSING"} | refreshToken=${refreshToken ? refreshToken.slice(0, 20) + "..." : "MISSING"}`);
+
+  if (!accessToken && !refreshToken) {
     return res.respond(401, req.t("middleware.unauthorized"));
   }
 
