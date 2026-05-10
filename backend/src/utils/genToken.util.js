@@ -5,5 +5,5 @@ export const accessTokenGenerator = (payload, expiresIn = '30m') => {
 };
 
 export const refreshTokenGenerator = (payload) => {
-  return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET);
+  return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 };

@@ -6,12 +6,7 @@ export const authService = {
   resetPassword: (password, token) => api.post('/api/v1/auth/reset-password', { password, token }),
   verify: () => api.get('/api/v1/auth/verify'),
   changePassword: (data) => api.patch('/api/v1/auth/change-password', data),
-  logout: () => {
-    // Clear tokens from localStorage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    return api.post('/api/v1/auth/logout');
-  },
+  logout: () => api.post('/api/v1/auth/logout'),
 };
 
 // User-scoped customer routes

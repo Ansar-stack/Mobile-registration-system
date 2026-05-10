@@ -22,35 +22,17 @@ export const register = asyncHandler(async (req, res) => {
   await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
 
   const accessToken = accessTokenGenerator({ id: user.id });
-  
-  // Set cookies (for same-origin requests)
   sentCookie("accessToken", res, accessToken);
   sentCookie("refreshToken", res, refreshToken);
 
-  // Also send tokens in response body (for cross-origin requests)
-  res.respond(201, req.t("auth.registered"), { 
-    id: user.id, 
-    role: user.role,
-    accessToken,
-    refreshToken
-  });
+  res.respond(201, req.t("auth.registered"), { id: user.id, role: user.role });
 });
 
 // Login
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  console.log('Login attempt for:', email);
-
-  let user;
-  try {
-    [user] = await db.select().from(users).where(eq(users.email, email));
-    console.log('User found:', user ? 'Yes' : 'No');
-  } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
-  }
-
+  const [user] = await db.select().from(users).where(eq(users.email, email));
   if (!user) return res.respond(400, req.t("auth.userNotFound"));
 
   const match = await comparePassword(password, user.password);
@@ -60,29 +42,18 @@ export const login = asyncHandler(async (req, res) => {
   await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
 
   const accessToken = accessTokenGenerator({ id: user.id });
-  
-  console.log('Setting cookies for user:', user.email);
-  console.log('Access token length:', accessToken.length);
-  console.log('Refresh token length:', refreshToken.length);
-  
-  // Set cookies (for same-origin requests)
   sentCookie("accessToken", res, accessToken);
   sentCookie("refreshToken", res, refreshToken);
 
-  // Also send tokens in response body (for cross-origin requests)
-  res.respond(200, req.t("auth.loggedIn"), { 
-    id: user.id, 
-    role: user.role,
-    accessToken,
-    refreshToken
-  });
+  res.respond(200, req.t("auth.loggedIn"), { id: user.id, role: user.role });
 });
 
 // Logout
 export const logout = asyncHandler(async (req, res) => {
   await db.update(users).set({ refreshToken: null }).where(eq(users.id, req.user.id));
-  sentCookie("accessToken", res, "", { maxAge: 0 });
-  sentCookie("refreshToken", res, "", { maxAge: 0 });
+  const clearOptions = { httpOnly: true, secure: true, sameSite: "none", path: "/" };
+  res.clearCookie("accessToken", clearOptions);
+  res.clearCookie("refreshToken", clearOptions);
   res.respond(200, req.t("auth.loggedOut"));
 });
 

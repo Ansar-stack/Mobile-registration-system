@@ -47,7 +47,6 @@ const corsOptions = {
         // Allow requests with no origin (Postman, mobile apps, server-to-server)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
-        console.log('CORS blocked origin:', origin);
         return callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
@@ -97,67 +96,6 @@ app.get("/health", async (req, res) => {
     },
     timestamp: new Date().toISOString(),
     uptime: `${Math.floor(process.uptime())}s`,
-  });
-});
-
-// Temporary seed endpoint (REMOVE AFTER USE)
-app.post("/seed-admin", async (req, res) => {
-  try {
-    const bcrypt = await import("bcrypt");
-    const { eq } = await import("drizzle-orm");
-    const db = (await import("./src/db/index.js")).default;
-    const { users } = await import("./src/db/schema.js");
-
-    const email = "admin@gmail.com";
-    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
-    
-    if (existing) {
-      return res.json({ success: false, message: "Admin already exists" });
-    }
-
-    await db.insert(users).values({ 
-      email, 
-      password: await bcrypt.hash("admin123", 10), 
-      role: "admin" 
-    });
-    
-    res.json({ success: true, message: "Admin user created successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Debug endpoint to check users (REMOVE AFTER USE)
-app.get("/debug-users", async (req, res) => {
-  try {
-    const db = (await import("./src/db/index.js")).default;
-    const { users } = await import("./src/db/schema.js");
-    
-    const allUsers = await db.select({ id: users.id, email: users.email, role: users.role }).from(users);
-    
-    res.json({ 
-      success: true, 
-      count: allUsers.length,
-      users: allUsers 
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message, stack: error.stack });
-  }
-});
-
-// Debug endpoint to check cookies (REMOVE AFTER USE)
-app.get("/debug-cookies", (req, res) => {
-  res.json({
-    success: true,
-    cookies: req.cookies,
-    headers: {
-      origin: req.headers.origin,
-      cookie: req.headers.cookie
-    },
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      FRONTEND_URL: process.env.FRONTEND_URL
-    }
   });
 });
 

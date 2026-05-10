@@ -195,13 +195,14 @@ export const updateUser = asyncHandler(async (req, res) => {
   const [existing] = await db.select().from(users).where(eq(users.id, id));
   if (!existing) return res.respond(404, req.t("user.notFound"));
 
+  const seededAdminEmail = process.env.SEEDED_ADMIN_EMAIL;
+  if (seededAdminEmail && existing.email === seededAdminEmail)
+    return res.respond(403, req.t("user.cannotModifySeededAdmin"));
+
   if (email && email !== existing.email) {
     const [emailTaken] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
     if (emailTaken) return res.respond(400, req.t("user.emailExists"));
   }
-
-  if (role && role !== "admin" && existing.role === "admin" && existing.id === 1)
-    return res.respond(400, req.t("user.cannotChangeAdminRole"));
 
   const data = {};
   if (name)       data.name       = name;
@@ -221,10 +222,14 @@ export const updateUser = asyncHandler(async (req, res) => {
 // DELETE /admin/users/:id
 export const deleteUser = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
-  const [existing] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, id));
+  const [existing] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, id));
   if (!existing) return res.respond(404, req.t("user.notFound"));
   if (existing.id === req.user.id) return res.respond(400, req.t("user.cannotDeleteSelf"));
-  if (existing.id === 1) return res.respond(400, req.t("user.cannotDeleteAdmin"));
+
+  const seededAdminEmail = process.env.SEEDED_ADMIN_EMAIL;
+  if (seededAdminEmail && existing.email === seededAdminEmail)
+    return res.respond(403, req.t("user.cannotModifySeededAdmin"));
+
   await db.delete(users).where(eq(users.id, id));
   res.respond(200, req.t("user.deleted"));
 });
