@@ -1,11 +1,11 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3fa043ed-12c1-49fa-9cff-b758a3336d1a",
+  "id": "663dd335-0870-401d-acff-8a661e3b1413",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "Address": {
-      "name": "Address",
+    "addresses": {
+      "name": "addresses",
       "columns": {
         "id": {
           "name": "id",
@@ -49,30 +49,30 @@
           "notNull": false,
           "autoincrement": false
         },
-        "postalCode": {
-          "name": "postalCode",
+        "postal_code": {
+          "name": "postal_code",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "customerId": {
-          "name": "customerId",
+        "customer_id": {
+          "name": "customer_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": "(datetime('now'))"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -82,12 +82,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "Address_customerId_Customer_id_fk": {
-          "name": "Address_customerId_Customer_id_fk",
-          "tableFrom": "Address",
-          "tableTo": "Customer",
+        "addresses_customer_id_customers_id_fk": {
+          "name": "addresses_customer_id_customers_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "customers",
           "columnsFrom": [
-            "customerId"
+            "customer_id"
           ],
           "columnsTo": [
             "id"
@@ -100,8 +100,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "Customer": {
-      "name": "Customer",
+    "customers": {
+      "name": "customers",
       "columns": {
         "id": {
           "name": "id",
@@ -110,15 +110,15 @@
           "notNull": true,
           "autoincrement": true
         },
-        "firstName": {
-          "name": "firstName",
+        "first_name": {
+          "name": "first_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "lastName": {
-          "name": "lastName",
+        "last_name": {
+          "name": "last_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -131,51 +131,51 @@
           "notNull": true,
           "autoincrement": false
         },
-        "idCardNumber": {
-          "name": "idCardNumber",
+        "id_card_number": {
+          "name": "id_card_number",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "phoneNumber": {
-          "name": "phoneNumber",
+        "phone_number": {
+          "name": "phone_number",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "idImage": {
-          "name": "idImage",
+        "id_image": {
+          "name": "id_image",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "idImagePublicId": {
-          "name": "idImagePublicId",
+        "id_image_public_id": {
+          "name": "id_image_public_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "addedBy": {
-          "name": "addedBy",
+        "added_by": {
+          "name": "added_by",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": "(datetime('now'))"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -184,28 +184,28 @@
         }
       },
       "indexes": {
-        "Customer_idCardNumber_unique": {
-          "name": "Customer_idCardNumber_unique",
+        "customers_id_card_number_unique": {
+          "name": "customers_id_card_number_unique",
           "columns": [
-            "idCardNumber"
+            "id_card_number"
           ],
           "isUnique": true
         },
-        "Customer_phoneNumber_unique": {
-          "name": "Customer_phoneNumber_unique",
+        "customers_phone_number_unique": {
+          "name": "customers_phone_number_unique",
           "columns": [
-            "phoneNumber"
+            "phone_number"
           ],
           "isUnique": true
         }
       },
       "foreignKeys": {
-        "Customer_addedBy_User_id_fk": {
-          "name": "Customer_addedBy_User_id_fk",
-          "tableFrom": "Customer",
-          "tableTo": "User",
+        "customers_added_by_users_id_fk": {
+          "name": "customers_added_by_users_id_fk",
+          "tableFrom": "customers",
+          "tableTo": "users",
           "columnsFrom": [
-            "addedBy"
+            "added_by"
           ],
           "columnsTo": [
             "id"
@@ -218,8 +218,94 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "Mobile": {
-      "name": "Mobile",
+    "detected_stolen_mobiles": {
+      "name": "detected_stolen_mobiles",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "stolen_mobile_id": {
+          "name": "stolen_mobile_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mobile_id": {
+          "name": "mobile_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "detected_at": {
+          "name": "detected_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "detected_stolen_mobiles_stolen_mobile_id_stolen_mobiles_id_fk": {
+          "name": "detected_stolen_mobiles_stolen_mobile_id_stolen_mobiles_id_fk",
+          "tableFrom": "detected_stolen_mobiles",
+          "tableTo": "stolen_mobiles",
+          "columnsFrom": [
+            "stolen_mobile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "detected_stolen_mobiles_mobile_id_mobiles_id_fk": {
+          "name": "detected_stolen_mobiles_mobile_id_mobiles_id_fk",
+          "tableFrom": "detected_stolen_mobiles",
+          "tableTo": "mobiles",
+          "columnsFrom": [
+            "mobile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "detected_stolen_mobiles_transaction_id_transactions_id_fk": {
+          "name": "detected_stolen_mobiles_transaction_id_transactions_id_fk",
+          "tableFrom": "detected_stolen_mobiles",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "mobiles": {
+      "name": "mobiles",
       "columns": {
         "id": {
           "name": "id",
@@ -277,16 +363,16 @@
           "notNull": false,
           "autoincrement": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": "(datetime('now'))"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -295,8 +381,8 @@
         }
       },
       "indexes": {
-        "Mobile_imei1_unique": {
-          "name": "Mobile_imei1_unique",
+        "mobiles_imei1_unique": {
+          "name": "mobiles_imei1_unique",
           "columns": [
             "imei1"
           ],
@@ -308,8 +394,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "Notification": {
-      "name": "Notification",
+    "notifications": {
+      "name": "notifications",
       "columns": {
         "id": {
           "name": "id",
@@ -339,16 +425,30 @@
           "notNull": true,
           "autoincrement": false
         },
-        "isRead": {
-          "name": "isRead",
+        "is_read": {
+          "name": "is_read",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "mobile_id": {
+          "name": "mobile_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -357,13 +457,40 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "notifications_mobile_id_mobiles_id_fk": {
+          "name": "notifications_mobile_id_mobiles_id_fk",
+          "tableFrom": "notifications",
+          "tableTo": "mobiles",
+          "columnsFrom": [
+            "mobile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "notifications_user_id_users_id_fk": {
+          "name": "notifications_user_id_users_id_fk",
+          "tableFrom": "notifications",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "StolenMobile": {
-      "name": "StolenMobile",
+    "stolen_mobiles": {
+      "name": "stolen_mobiles",
       "columns": {
         "id": {
           "name": "id",
@@ -421,30 +548,30 @@
           "notNull": false,
           "autoincrement": false
         },
-        "reporterName": {
-          "name": "reporterName",
+        "reporter_name": {
+          "name": "reporter_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "reporterPhone": {
-          "name": "reporterPhone",
+        "reporter_phone": {
+          "name": "reporter_phone",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": "(datetime('now'))"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -453,8 +580,8 @@
         }
       },
       "indexes": {
-        "StolenMobile_imei1_unique": {
-          "name": "StolenMobile_imei1_unique",
+        "stolen_mobiles_imei1_unique": {
+          "name": "stolen_mobiles_imei1_unique",
           "columns": [
             "imei1"
           ],
@@ -466,8 +593,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "Transaction": {
-      "name": "Transaction",
+    "transactions": {
+      "name": "transactions",
       "columns": {
         "id": {
           "name": "id",
@@ -497,37 +624,37 @@
           "notNull": false,
           "autoincrement": false
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "mobileId": {
-          "name": "mobileId",
+        "mobile_id": {
+          "name": "mobile_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "customerId": {
-          "name": "customerId",
+        "customer_id": {
+          "name": "customer_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": "(datetime('now'))"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -537,12 +664,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "Transaction_userId_User_id_fk": {
-          "name": "Transaction_userId_User_id_fk",
-          "tableFrom": "Transaction",
-          "tableTo": "User",
+        "transactions_user_id_users_id_fk": {
+          "name": "transactions_user_id_users_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -550,12 +677,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "Transaction_mobileId_Mobile_id_fk": {
-          "name": "Transaction_mobileId_Mobile_id_fk",
-          "tableFrom": "Transaction",
-          "tableTo": "Mobile",
+        "transactions_mobile_id_mobiles_id_fk": {
+          "name": "transactions_mobile_id_mobiles_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "mobiles",
           "columnsFrom": [
-            "mobileId"
+            "mobile_id"
           ],
           "columnsTo": [
             "id"
@@ -563,12 +690,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "Transaction_customerId_Customer_id_fk": {
-          "name": "Transaction_customerId_Customer_id_fk",
-          "tableFrom": "Transaction",
-          "tableTo": "Customer",
+        "transactions_customer_id_customers_id_fk": {
+          "name": "transactions_customer_id_customers_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "customers",
           "columnsFrom": [
-            "customerId"
+            "customer_id"
           ],
           "columnsTo": [
             "id"
@@ -581,8 +708,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "User": {
-      "name": "User",
+    "users": {
+      "name": "users",
       "columns": {
         "id": {
           "name": "id",
@@ -619,8 +746,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "shopNumber": {
-          "name": "shopNumber",
+        "shop_number": {
+          "name": "shop_number",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -634,23 +761,23 @@
           "autoincrement": false,
           "default": "'user'"
         },
-        "refreshToken": {
-          "name": "refreshToken",
+        "refresh_token": {
+          "name": "refresh_token",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": "(datetime('now'))"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -659,8 +786,8 @@
         }
       },
       "indexes": {
-        "User_email_unique": {
-          "name": "User_email_unique",
+        "users_email_unique": {
+          "name": "users_email_unique",
           "columns": [
             "email"
           ],
