@@ -51,8 +51,8 @@ const corsOptions = {
     },
     methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
-    exposedHeaders: ['Set-Cookie'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language', 'x-refresh-token'],
+    exposedHeaders: ['x-new-access-token', 'x-new-refresh-token'],
 };
 
 app.use(cors(corsOptions));

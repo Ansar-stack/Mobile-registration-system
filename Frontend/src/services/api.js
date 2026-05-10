@@ -12,19 +12,28 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   config.headers['Accept-Language'] = i18n.language || 'en';
-  const token = localStorage.getItem('accessToken');
-  if (token) config.headers['Authorization'] = `Bearer ${token}`;
+  const accessToken = localStorage.getItem('accessToken');
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (accessToken) config.headers['Authorization'] = `Bearer ${accessToken}`;
+  if (refreshToken) config.headers['x-refresh-token'] = refreshToken;
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const newAccessToken = response.headers['x-new-access-token'];
+    const newRefreshToken = response.headers['x-new-refresh-token'];
+    if (newAccessToken) localStorage.setItem('accessToken', newAccessToken);
+    if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
+    return response;
+  },
   (error) => {
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message || 'Something went wrong';
 
     if (status === 401 && window.location.pathname !== '/login') {
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       window.location.href = '/login';
     }
 
