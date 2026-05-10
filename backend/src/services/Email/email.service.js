@@ -6,7 +6,7 @@ export async function sendPasswordResetEmail(toEmail, resetLink) {
       service_id: process.env.SERVICE_ID,
       template_id: process.env.TEMPLATE_ID,
       user_id: process.env.PUBLIC_KEY,
-      private_key: process.env.PRIVATE_KEY,
+      accessToken: process.env.PRIVATE_KEY,
       template_params: {
         to_email: toEmail,
         reset_link: resetLink,
@@ -16,6 +16,6 @@ export async function sendPasswordResetEmail(toEmail, resetLink) {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Failed to send email: ${text}`);
+    throw new Error(`EmailJS error: ${text}`);
   }
 }

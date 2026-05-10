@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import db from "../src/db/index.js";
 import { users } from "../src/db/schema.js";
 
-const email = "admin@gmail.com";
+const email = "mahmoodkhaliqdad@gmail.com";
 
 const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
 if (existing) {
