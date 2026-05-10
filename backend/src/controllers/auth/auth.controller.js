@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import { asyncHandler } from "../../utils/AsyncHandler.util.js";
-import { accessTokenGenerator, refreshTokenGenerator } from "../../utils/genToken.util.js";
+import { accessTokenGenerator } from "../../utils/genToken.util.js";
 import { comparePassword, hashPassword } from "../../utils/hash.util.js";
-import { sentCookie } from "../../utils/sentCookie.util.js";
 import db from "../../configs/db/db.config.js";
 import { users } from "../../db/schema.js";
 import jwt from "jsonwebtoken";
@@ -18,14 +17,9 @@ export const register = asyncHandler(async (req, res) => {
   const hashed = await hashPassword(password);
   const [user] = await db.insert(users).values({ email, password: hashed }).returning({ id: users.id, role: users.role });
 
-  const refreshToken = refreshTokenGenerator({ id: user.id });
-  await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
-
   const accessToken = accessTokenGenerator({ id: user.id });
-  sentCookie("accessToken", res, accessToken);
-  sentCookie("refreshToken", res, refreshToken);
 
-  res.respond(201, req.t("auth.registered"), { id: user.id, role: user.role });
+  res.respond(201, req.t("auth.registered"), { id: user.id, role: user.role, accessToken });
 });
 
 // Login
@@ -38,23 +32,13 @@ export const login = asyncHandler(async (req, res) => {
   const match = await comparePassword(password, user.password);
   if (!match) return res.respond(400, req.t("auth.incorrectPassword"));
 
-  const refreshToken = refreshTokenGenerator({ id: user.id });
-  await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
-
   const accessToken = accessTokenGenerator({ id: user.id });
-  sentCookie("accessToken", res, accessToken);
-  sentCookie("refreshToken", res, refreshToken);
 
-  res.respond(200, req.t("auth.loggedIn"), { id: user.id, role: user.role });
+  res.respond(200, req.t("auth.loggedIn"), { id: user.id, role: user.role, accessToken });
 });
 
 // Logout
 export const logout = asyncHandler(async (req, res) => {
-  await db.update(users).set({ refreshToken: null }).where(eq(users.id, req.user.id));
-  const isProd = process.env.NODE_ENV === "production";
-  const clearOptions = { httpOnly: true, secure: isProd, sameSite: isProd ? "none" : "lax", path: "/" };
-  res.clearCookie("accessToken", clearOptions);
-  res.clearCookie("refreshToken", clearOptions);
   res.respond(200, req.t("auth.loggedOut"));
 });
 

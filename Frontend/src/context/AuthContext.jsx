@@ -15,7 +15,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = useCallback(async (email, password) => {
-    await authService.login(email, password);
+    const loginRes = await authService.login(email, password);
+    localStorage.setItem('accessToken', loginRes.data.data.accessToken);
     const res = await authService.verify();
     const loggedInUser = res.data.data.user;
     setUser(loggedInUser);
@@ -24,6 +25,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     try { await authService.logout(); } catch { /* ignore */ }
+    localStorage.removeItem('accessToken');
     setUser(null);
   }, []);
 
