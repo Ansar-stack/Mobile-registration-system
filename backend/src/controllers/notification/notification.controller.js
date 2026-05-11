@@ -1,7 +1,9 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { asyncHandler } from "../../utils/AsyncHandler.util.js";
 import db from "../../configs/db/db.config.js";
-import { notifications, mobiles, users, transactions } from "../../db/schema.js";
+import { notifications, mobiles, users, transactions, customers, addresses } from "../../db/schema.js";
+import PDFDocument from "pdfkit";
+import axios from "axios";
 
 const notifCols = {
   id: notifications.id, type: notifications.type, message: notifications.message,
@@ -43,7 +45,31 @@ export const getNotifications = asyncHandler(async (req, res) => {
     db.select({ unreadCount: sql`count(*)`.mapWith(Number) }).from(notifications).where(eq(notifications.isRead, false)),
   ]);
 
-  const enriched = await Promise.all(rows.map(enrichNotification));
+  // Batch fetch mobiles and users instead of N+1 queries
+  const mobileIds = [...new Set(rows.map(r => r.mobileId).filter(Boolean))];
+  const userIds   = [...new Set(rows.map(r => r.userId).filter(Boolean))];
+
+  const [mobileRows, userRows] = await Promise.all([
+    mobileIds.length
+      ? db.query.mobiles.findMany({
+          where: (m, { inArray: inFn }) => inFn(m.id, mobileIds),
+          with: { transactions: { orderBy: (tx, { desc }) => [desc(tx.createdAt)], with: { user: { columns: { id: true, name: true, email: true, shopNumber: true } }, customer: { columns: { id: true, firstName: true, lastName: true, phoneNumber: true } } } } },
+        })
+      : Promise.resolve([]),
+    userIds.length
+      ? db.select({ id: users.id, name: users.name, email: users.email, shopNumber: users.shopNumber, phone: users.phone }).from(users).where(inArray(users.id, userIds))
+      : Promise.resolve([]),
+  ]);
+
+  const mobileMap = Object.fromEntries(mobileRows.map(m => [m.id, m]));
+  const userMap   = Object.fromEntries(userRows.map(u => [u.id, u]));
+
+  const enriched = rows.map(n => ({
+    ...n,
+    mobile:       n.mobileId ? (mobileMap[n.mobileId] ?? null) : null,
+    registeredBy: n.userId   ? (userMap[n.userId]     ?? null) : null,
+  }));
+
   res.respond(200, req.t("notification.fetched"), { notifications: enriched, unreadCount, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
 });
 
@@ -84,4 +110,172 @@ export const deleteNotification = asyncHandler(async (req, res) => {
 export const deleteAllRead = asyncHandler(async (req, res) => {
   await db.delete(notifications).where(eq(notifications.isRead, true));
   res.respond(200, req.t("notification.allReadDeleted"));
+});
+
+// GET /admin/notifications/:id/pdf
+export const downloadNotificationPdf = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
+  const [notif] = await db.select().from(notifications).where(eq(notifications.id, id));
+  if (!notif) return res.respond(404, req.t("notification.notFound"));
+
+  // Fetch full mobile with transactions, customer, addresses, user
+  const mobile = notif.mobileId ? await db.query.mobiles.findFirst({
+    where: (m, { eq: eqFn }) => eqFn(m.id, notif.mobileId),
+    with: {
+      transactions: {
+        orderBy: (tx, { desc }) => [desc(tx.createdAt)],
+        with: {
+          user: { columns: { id: true, name: true, email: true, phone: true, shopNumber: true } },
+          customer: {
+            with: { addresses: true },
+          },
+        },
+      },
+    },
+  }) : null;
+
+  const tx         = mobile?.transactions?.[0] ?? null;
+  const customer   = tx?.customer ?? null;
+  const registeredBy = tx?.user ?? null;
+
+  // Download ID image if exists
+  let idImageBuffer = null;
+  if (customer?.idImage) {
+    try {
+      const imgRes = await axios.get(customer.idImage, { responseType: "arraybuffer", timeout: 8000 });
+      idImageBuffer = Buffer.from(imgRes.data);
+    } catch { /* skip image if download fails */ }
+  }
+
+  const doc = new PDFDocument({ margin: 50, size: "A4", bufferPages: true });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="mobile-registration-${notif.id}.pdf"`);
+
+  doc.on("error", (err) => {
+    if (!res.headersSent) {
+      res.respond(500, "Failed to generate PDF");
+    } else {
+      res.end();
+    }
+  });
+
+  doc.pipe(res);
+
+  const W           = doc.page.width - 100;
+  const LEFT        = 50;
+  const primaryColor = "#1a56db";
+  const lightGray    = "#f3f4f6";
+  const darkText     = "#111827";
+  const mutedText    = "#6b7280";
+
+  // ── Header ──
+  doc.rect(0, 0, doc.page.width, 90).fill(primaryColor);
+  doc.fillColor("white").fontSize(20).font("Helvetica-Bold")
+     .text("Kandahar Mobile Registration System", LEFT, 22, { width: doc.page.width - 100, align: "center" });
+  doc.fillColor("white").fontSize(10).font("Helvetica")
+     .text("Official Mobile Registration Certificate", LEFT, 50, { width: doc.page.width - 100, align: "center" });
+
+  doc.y = 105;
+
+  // ── Date ──
+  doc.fillColor(mutedText).fontSize(9).font("Helvetica")
+     .text(`Generated: ${new Date().toLocaleString()}`, LEFT, doc.y, { width: W, align: "right" });
+  doc.moveDown(0.8);
+
+  const sectionTitle = (title) => {
+    doc.moveDown(0.5);
+    const sy = doc.y;
+    doc.rect(LEFT, sy, W, 22).fill(primaryColor);
+    doc.fillColor("white").fontSize(11).font("Helvetica-Bold")
+       .text(title, LEFT + 8, sy + 6, { width: W - 16 });
+    doc.y = sy + 26;
+  };
+
+  let rowToggle = false;
+  const row = (label, value) => {
+    if (!value && value !== 0) return;
+    const ry = doc.y;
+    const bg = rowToggle ? "#ffffff" : lightGray;
+    rowToggle = !rowToggle;
+    doc.rect(LEFT, ry, W, 20).fill(bg);
+    doc.fillColor(mutedText).fontSize(9).font("Helvetica-Bold")
+       .text(label, LEFT + 8, ry + 6, { width: 140, lineBreak: false });
+    doc.fillColor(darkText).fontSize(9).font("Helvetica")
+       .text(String(value), LEFT + 155, ry + 6, { width: W - 163, lineBreak: false });
+    doc.y = ry + 22;
+  };
+
+  // ── Mobile Info ──
+  if (mobile) {
+    rowToggle = false;
+    sectionTitle("Mobile Device Information");
+    row("IMEI 1",        mobile.imei1);
+    row("IMEI 2",        mobile.imei2);
+    row("Brand",         mobile.brand);
+    row("Model",         mobile.model);
+    row("Color",         mobile.color);
+    row("RAM",           mobile.ram     ? `${mobile.ram} GB`     : null);
+    row("Storage",       mobile.storage ? `${mobile.storage} GB` : null);
+    row("Registered At", mobile.createdAt ? new Date(mobile.createdAt).toLocaleString() : null);
+  }
+
+  // ── Transaction Info ──
+  if (tx) {
+    rowToggle = false;
+    sectionTitle("Transaction Details");
+    row("Type",  tx.type === "UNLOCK" ? "Screen Unlock" : tx.type);
+    row("Price", tx.price ? `$${tx.price}` : null);
+    row("Notes", tx.notes);
+    row("Date",  tx.createdAt ? new Date(tx.createdAt).toLocaleString() : null);
+  }
+
+  // ── Registered By ──
+  if (registeredBy) {
+    rowToggle = false;
+    sectionTitle("Registered By (User)");
+    row("Name",     registeredBy.name);
+    row("Email",    registeredBy.email);
+    row("Phone",    registeredBy.phone);
+    row("Shop No.", registeredBy.shopNumber);
+  }
+
+  // ── Customer Info ──
+  if (customer) {
+    rowToggle = false;
+    sectionTitle("Customer Information");
+    row("First Name",  customer.firstName);
+    row("Last Name",   customer.lastName);
+    row("Gender",      customer.gender);
+    row("Phone",       customer.phoneNumber);
+    row("ID Card No.", customer.idCardNumber);
+    if (customer.addresses?.length) {
+      customer.addresses.forEach((addr) => {
+        const addrVal = [addr.province, addr.city, addr.district].filter(Boolean).join(", ");
+        if (addrVal) row(`${addr.type} Address`, addrVal);
+      });
+    }
+  }
+
+  // ── ID Card Image ──
+  if (idImageBuffer) {
+    sectionTitle("Customer ID Card Image");
+    doc.moveDown(0.3);
+    const imgW = Math.min(W, 320);
+    const imgX = LEFT + (W - imgW) / 2;
+    try {
+      doc.image(idImageBuffer, imgX, doc.y, { width: imgW, fit: [imgW, 220] });
+      doc.moveDown(16);
+    } catch { /* skip unsupported format */ }
+  }
+
+  // ── Footer ──
+  doc.moveDown(2);
+  const fy = doc.y;
+  doc.rect(LEFT, fy, W, 1).fill("#e5e7eb");
+  doc.moveDown(0.5);
+  doc.fillColor(mutedText).fontSize(8).font("Helvetica")
+     .text("Kandahar Mobile Registration System — Confidential Document", LEFT, doc.y, { width: W, align: "center" });
+
+  doc.end();
 });

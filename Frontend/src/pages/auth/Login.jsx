@@ -16,12 +16,14 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { i18n } = useTranslation();
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const savedEmail = localStorage.getItem('lastEmail') || '';
+  const { register, handleSubmit, formState: { errors } } = useForm({ defaultValues: { email: savedEmail } });
 
   const onSubmit = async (data) => {
     setIsLoading(true);
     try {
       const user = await login(data.email, data.password);
+      localStorage.setItem('lastEmail', data.email);
       toast.success(t('auth.loginSuccess'));
       navigate(user.role === 'admin' ? '/admin/dashboard' : '/user/entry', { replace: true });
     } catch (error) {

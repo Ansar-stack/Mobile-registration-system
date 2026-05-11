@@ -81,6 +81,7 @@ export const notificationService = {
   markAllAsRead: () => api.patch('/api/v1/admin/notifications/read-all'),
   delete: (id) => api.delete(`/api/v1/admin/notifications/${id}`),
   deleteAllRead: () => api.delete('/api/v1/admin/notifications/delete-all-read'),
+  downloadPdf: (id) => api.get(`/api/v1/admin/notifications/${id}/pdf`, { responseType: 'blob' }),
 };
 
 export const dashboardService = {

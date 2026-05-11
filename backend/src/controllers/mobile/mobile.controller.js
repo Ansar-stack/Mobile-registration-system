@@ -18,6 +18,7 @@ const triggerNotifications = async (imei1, imei2, newMobileId, userId) => {
   const inserts = [];
   if (stolenMatch) inserts.push({ type: "STOLEN_MATCH", imei: imei1, mobileId: newMobileId, userId, message: `Registered mobile IMEI ${imei1} matches a stolen mobile entry` });
   if (dupeRows.length) inserts.push({ type: "DUPLICATE_IMEI", imei: imei1, mobileId: newMobileId, userId, message: `Duplicate IMEI detected: ${imei1} was registered again — ${dupeRows.length + 1} entries now exist` });
+  inserts.push({ type: "MOBILE_REGISTERED", imei: imei1, mobileId: newMobileId, userId, message: `A new mobile with IMEI ${imei1} was registered by user ID ${userId}` });
   if (inserts.length) await db.insert(notifications).values(inserts);
 };
 
@@ -112,13 +113,10 @@ export const createMobile = asyncHandler(async (req, res) => {
   if ((type === "BUY" || type === "UNLOCK") && !resolvedCustomerId)
     return res.respond(400, req.t("mobile.customerRequired"));
 
-  const [customerCheck] = await Promise.all([
-    resolvedCustomerId
-      ? db.select({ id: customers.id }).from(customers).where(eq(customers.id, resolvedCustomerId)).limit(1)
-      : Promise.resolve([{ id: true }]),
-  ]);
-
-  if (resolvedCustomerId && !customerCheck.length) return res.respond(404, req.t("mobile.customerNotFound"));
+  if (resolvedCustomerId) {
+    const [customerCheck] = await db.select({ id: customers.id }).from(customers).where(eq(customers.id, resolvedCustomerId)).limit(1);
+    if (!customerCheck) return res.respond(404, req.t("mobile.customerNotFound"));
+  }
 
   const [mobile] = await db.insert(mobiles).values({ imei1, imei2, brand, model, color, ram, storage }).returning({ id: mobiles.id });
   await db.insert(transactions).values({ type, price: price || null, notes: notes || null, customerId: resolvedCustomerId, mobileId: mobile.id, userId: req.user.id });

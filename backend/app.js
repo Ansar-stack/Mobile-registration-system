@@ -10,6 +10,8 @@ import rateLimit from 'express-rate-limit';
 import logger, { morganStream } from './logs/logger.js';
 import hpp from 'hpp';
 import { t } from './src/utils/i18n.util.js';
+import db from './src/configs/db/db.config.js';
+import { sql } from 'drizzle-orm';
 
 const app = express();
 
@@ -70,14 +72,7 @@ app.get("/health", async (req, res) => {
   let dbError = null;
 
   try {
-    const { createClient } = await import("@libsql/client");
-    const isLocal = process.env.DB_MODE === "local";
-    const client = createClient(
-      isLocal
-        ? { url: process.env.LOCAL_DATABASE_URL }
-        : { url: process.env.DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN }
-    );
-    await client.execute("SELECT 1");
+    await db.run(sql`SELECT 1`);
   } catch (err) {
     dbStatus = "error";
     dbError = err.message;

@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '../../component/ui/dialog';
 import {
-  Bell, Copy, Trash2, CheckCheck, Check, ShieldAlert, Eye, Search, Filter, X,
+  Bell, Copy, Trash2, CheckCheck, Check, ShieldAlert, Eye, Search, Filter, X, FileDown, Smartphone,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -33,6 +33,13 @@ const NOTIF_META = {
     cardCls: 'border-orange-200 bg-orange-50/40',
     badgeCls: 'bg-orange-100 text-orange-700',
     label: 'Duplicate IMEI',
+  },
+  MOBILE_REGISTERED: {
+    icon: Smartphone,
+    iconCls: 'text-blue-500',
+    cardCls: 'border-blue-200 bg-blue-50/40',
+    badgeCls: 'bg-blue-100 text-blue-700',
+    label: 'Mobile Registered',
   },
 };
 const getMeta = (type) =>
@@ -342,6 +349,20 @@ export default function Notifications() {
     }
   };
 
+  const downloadPdf = async (id) => {
+    try {
+      const res = await notificationService.downloadPdf(id);
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mobile-registration-${id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to download PDF');
+    }
+  };
+
   /* ── detected actions ── */
   const handleDeleteDetected = async () => {
     if (!deleteTarget) return;
@@ -385,7 +406,7 @@ export default function Notifications() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* type filter pills */}
-            {['STOLEN_MATCH', 'DUPLICATE_IMEI'].map((type) => {
+            {['STOLEN_MATCH', 'DUPLICATE_IMEI', 'MOBILE_REGISTERED'].map((type) => {
               const meta = getMeta(type);
               return (
                 <button
@@ -451,6 +472,11 @@ export default function Notifications() {
                     {!n.isRead && (
                       <Button variant="ghost" size="icon" className="h-8 w-8" title={t('notifications.markAsRead')} onClick={() => markAsRead(n.id)}>
                         <Check className="h-4 w-4 text-green-500" />
+                      </Button>
+                    )}
+                    {n.type === 'MOBILE_REGISTERED' && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50" title="Download PDF" onClick={() => downloadPdf(n.id)}>
+                        <FileDown className="h-4 w-4" />
                       </Button>
                     )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" title={t('notifications.delete')} onClick={() => deleteNotif(n.id)}>

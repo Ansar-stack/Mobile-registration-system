@@ -64,14 +64,11 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   const [user] = await db.select().from(users).where(eq(users.email, email));
 
   // Always respond the same way to prevent user enumeration
-  if (user) {
-    const token = accessTokenGenerator({ id: user.id }, "15m");
-    const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${token}`;
-    await sendPasswordResetEmail(email, resetLink);
-  } else {
-    const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=invalid`;
-    await sendPasswordResetEmail(email, resetLink);
-  }
+  if (!user) return res.respond(400, req.t("auth.userNotFound"));
+
+  const token = accessTokenGenerator({ id: user.id }, "15m");
+  const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${token}`;
+  await sendPasswordResetEmail(email, resetLink);
 
   res.respond(200, req.t("auth.resetLinkSent"));
 });
