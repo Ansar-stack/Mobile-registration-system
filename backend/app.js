@@ -15,11 +15,10 @@ import { sql } from 'drizzle-orm';
 
 const app = express();
 
-app.use(express.json());
-
 // HTTP request logging via morgan → winston
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', { stream: morganStream }));
 
+app.use(express.json());
 
 app.use(urlencoded({extended: true}));
 app.use(cookieParser());

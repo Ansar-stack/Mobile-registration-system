@@ -18,7 +18,7 @@ export const verifyAndRotateRefreshToken = async (refreshToken) => {
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 
     const [user] = await db
-      .select({ id: users.id, name: users.name, email: users.email, role: users.role, phone: users.phone, shopNumber: users.shopNumber, refreshToken: users.refreshToken })
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role, phone: users.phone, shopNumber: users.shopNumber, isActive: users.isActive, refreshToken: users.refreshToken })
       .from(users)
       .where(eq(users.id, decoded.id));
     if (!user || user.refreshToken !== refreshToken) return { valid: false, user: null };

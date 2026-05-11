@@ -1,4 +1,4 @@
-import { eq, or, like, and, sql, inArray } from "drizzle-orm";
+import { eq, or, like, and, sql } from "drizzle-orm";
 import { asyncHandler } from "../../utils/AsyncHandler.util.js";
 import { hashPassword } from "../../utils/hash.util.js";
 import db from "../../configs/db/db.config.js";
@@ -6,7 +6,8 @@ import { users, transactions, customers, mobiles } from "../../db/schema.js";
 
 const userCols = {
   id: users.id, name: users.name, email: users.email, phone: users.phone,
-  shopNumber: users.shopNumber, role: users.role, createdAt: users.createdAt, updatedAt: users.updatedAt,
+  shopNumber: users.shopNumber, idCardNumber: users.idCardNumber, address: users.address,
+  role: users.role, isActive: users.isActive, createdAt: users.createdAt, updatedAt: users.updatedAt,
 };
 
 // GET /admin/users
@@ -55,7 +56,7 @@ export const getUserMobiles = asyncHandler(async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page)  || 1);
   const limit  = Math.min(100, parseInt(req.query.limit) || 10);
   const offset = (page - 1) * limit;
-  const { q, brand, model, color, type } = req.query;
+  const { q, brand, model, color, imei } = req.query;
 
   const [userRow] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId));
   if (!userRow) return res.respond(404, req.t("user.notFound"));
@@ -64,13 +65,16 @@ export const getUserMobiles = asyncHandler(async (req, res) => {
   if (brand) mFilters.push(like(mobiles.brand, `%${brand.trim()}%`));
   if (model) mFilters.push(like(mobiles.model, `%${model.trim()}%`));
   if (color) mFilters.push(like(mobiles.color, `%${color.trim()}%`));
+  if (imei) {
+    const t = `%${imei.trim()}%`;
+    mFilters.push(or(like(mobiles.imei1, t), like(mobiles.imei2, t)));
+  }
   if (q) {
     const t = `%${q.trim()}%`;
     mFilters.push(or(like(mobiles.imei1, t), like(mobiles.imei2, t), like(mobiles.brand, t), like(mobiles.model, t)));
   }
 
   const txFilters = [eq(transactions.userId, userId)];
-  if (type) txFilters.push(eq(transactions.type, type));
   const joinWhere = and(...txFilters, ...(mFilters.length ? mFilters : []));
 
   const [rows, [{ total }]] = await Promise.all([
@@ -91,28 +95,7 @@ export const getUserMobiles = asyncHandler(async (req, res) => {
     .where(joinWhere),
   ]);
 
-  if (!rows.length) return res.respond(200, req.t("user.mobilesFetched"), { mobiles: [], pagination: { total: 0, page, limit, totalPages: 0 } });
-
-  const mobileIds = rows.map((m) => m.id);
-  const txWhere   = and(eq(transactions.userId, userId), inArray(transactions.mobileId, mobileIds));
-  const txRows    = await db
-    .select({ id: transactions.id, type: transactions.type, price: transactions.price, createdAt: transactions.createdAt, mobileId: transactions.mobileId, customerId: transactions.customerId })
-    .from(transactions).where(txWhere);
-
-  const custIds = [...new Set(txRows.map((t) => t.customerId).filter(Boolean))];
-  const custRows = custIds.length
-    ? await db.select({ id: customers.id, firstName: customers.firstName, lastName: customers.lastName }).from(customers).where(inArray(customers.id, custIds))
-    : [];
-  const custMap = Object.fromEntries(custRows.map((c) => [c.id, c]));
-
-  const txByMobile = txRows.reduce((acc, t) => {
-    const { mobileId, customerId, ...rest } = t;
-    (acc[mobileId] ??= []).push({ ...rest, customer: custMap[customerId] ?? null });
-    return acc;
-  }, {});
-
-  const result = rows.map((m) => ({ ...m, transactions: txByMobile[m.id] ?? [] }));
-  res.respond(200, req.t("user.mobilesFetched"), { mobiles: result, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
+  res.respond(200, req.t("user.mobilesFetched"), { mobiles: rows, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
 });
 
 // GET /admin/users/:id/customers
@@ -178,19 +161,19 @@ export const getUserTransactions = asyncHandler(async (req, res) => {
 
 // POST /admin/users
 export const createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, phone, shopNumber } = req.body;
+  const { name, email, password, role, phone, shopNumber, idCardNumber, address } = req.body;
 
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
   if (existing) return res.respond(400, req.t("user.emailExists"));
 
-  const [user] = await db.insert(users).values({ name, email, password: await hashPassword(password), role: role || "user", phone, shopNumber }).returning(userCols);
+  const [user] = await db.insert(users).values({ name, email, password: await hashPassword(password), role: role || "user", phone, shopNumber, idCardNumber, address }).returning(userCols);
   res.respond(201, req.t("user.created"), { user });
 });
 
 // PATCH /admin/users/:id
 export const updateUser = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, email, password, role, phone, shopNumber } = req.body;
+  const { name, email, password, role, phone, shopNumber, idCardNumber, address } = req.body;
 
   const [existing] = await db.select().from(users).where(eq(users.id, id));
   if (!existing) return res.respond(404, req.t("user.notFound"));
@@ -205,18 +188,51 @@ export const updateUser = asyncHandler(async (req, res) => {
   }
 
   const data = {};
-  if (name)       data.name       = name;
-  if (email)      data.email      = email;
-  if (role)       data.role       = role;
-  if (phone)      data.phone      = phone;
-  if (shopNumber) data.shopNumber = shopNumber;
-  if (password)   data.password   = await hashPassword(password);
+  if (name        !== undefined) data.name        = name;
+  if (email       !== undefined) data.email       = email;
+  if (role        !== undefined) data.role        = role;
+  if (phone       !== undefined) data.phone       = phone;
+  if (shopNumber  !== undefined) data.shopNumber  = shopNumber;
+  if (idCardNumber !== undefined) data.idCardNumber = idCardNumber;
+  if (address     !== undefined) data.address     = address;
+  if (password)                  data.password    = await hashPassword(password);
 
   if (!Object.keys(data).length) return res.respond(400, req.t("user.noFields"));
 
   data.updatedAt = new Date().toISOString();
   const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning(userCols);
   res.respond(200, req.t("user.updated"), { user });
+});
+
+// PATCH /admin/users/:id/toggle-active
+export const toggleUserActive = asyncHandler(async (req, res) => {
+  const requesterId    = req.user.id;
+  const requesterEmail = req.user.email;
+  const targetId       = parseInt(req.params.id);
+  const seededAdminEmail = process.env.SEEDED_ADMIN_EMAIL;
+
+  // Only the primary admin can toggle
+  if (seededAdminEmail) {
+    if (requesterEmail !== seededAdminEmail)
+      return res.respond(403, req.t("user.onlyPrimaryAdmin"));
+  } else {
+    const [primaryAdmin] = await db.select({ id: users.id }).from(users).orderBy(sql`${users.id} asc`).limit(1);
+    if (!primaryAdmin || primaryAdmin.id !== requesterId)
+      return res.respond(403, req.t("user.onlyPrimaryAdmin"));
+  }
+
+  const [target] = await db.select().from(users).where(eq(users.id, targetId));
+  if (!target) return res.respond(404, req.t("user.notFound"));
+  if (target.id === requesterId) return res.respond(400, req.t("user.cannotDeactivateSelf"));
+  if (seededAdminEmail && target.email === seededAdminEmail)
+    return res.respond(403, req.t("user.cannotModifySeededAdmin"));
+
+  const newStatus  = !target.isActive;
+  const updateData = { isActive: newStatus, updatedAt: new Date().toISOString() };
+  if (!newStatus) updateData.refreshToken = null;
+
+  const [user] = await db.update(users).set(updateData).where(eq(users.id, targetId)).returning(userCols);
+  res.respond(200, newStatus ? req.t("user.activated") : req.t("user.deactivated"), { user });
 });
 
 // DELETE /admin/users/:id

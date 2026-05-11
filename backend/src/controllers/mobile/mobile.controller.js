@@ -1,7 +1,7 @@
 import { eq, or, like, and, sql, inArray } from "drizzle-orm";
 import { asyncHandler } from "../../utils/AsyncHandler.util.js";
 import db from "../../configs/db/db.config.js";
-import { mobiles, transactions, stolenMobiles, notifications, customers, users } from "../../db/schema.js";
+import { mobiles, transactions, stolenMobiles, notifications, customers } from "../../db/schema.js";
 
 const triggerNotifications = async (imei1, imei2, newMobileId, userId) => {
   const imeiOr = [eq(stolenMobiles.imei1, imei1), ...(imei2 ? [eq(stolenMobiles.imei2, imei2), eq(stolenMobiles.imei1, imei2)] : [])];

@@ -34,6 +34,8 @@ export const login = asyncHandler(async (req, res) => {
   const match = await comparePassword(password, user.password);
   if (!match) return res.respond(400, req.t("auth.incorrectPassword"));
 
+  if (user.isActive === false) return res.respond(403, req.t("auth.accountDeactivated"));
+
   const accessToken = accessTokenGenerator({ id: user.id });
   const refreshToken = refreshTokenGenerator({ id: user.id });
   await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
@@ -50,7 +52,7 @@ export const logout = asyncHandler(async (req, res) => {
 // Verify (get current user)
 export const verify = asyncHandler(async (req, res) => {
   const [user] = await db
-    .select({ id: users.id, name: users.name, email: users.email, phone: users.phone, shopNumber: users.shopNumber, role: users.role, createdAt: users.createdAt })
+    .select({ id: users.id, name: users.name, email: users.email, phone: users.phone, shopNumber: users.shopNumber, role: users.role, isActive: users.isActive, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.id, req.user.id));
   if (!user) return res.respond(404, req.t("auth.userNotFoundById"));

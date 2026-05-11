@@ -8,6 +8,13 @@
       "when": 1778392046856,
       "tag": "0000_old_rattler",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778392046857,
+      "tag": "0001_users_idcard_address_isactive",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,7 @@ export const authMiddleware = async (req, res, next) => {
       if (verifyToken.valid) {
         const [user] = await db.select().from(users).where(eq(users.id, verifyToken.decoded.id));
         if (!user) return res.respond(401, req.t("middleware.unauthorized"));
+        if (user.isActive === false) return res.respond(403, req.t("middleware.accountDeactivated"));
         req.user = user;
         return next();
       }
@@ -23,6 +24,7 @@ export const authMiddleware = async (req, res, next) => {
     if (refreshToken) {
       const refreshVerification = await verifyAndRotateRefreshToken(refreshToken);
       if (!refreshVerification.valid) return res.respond(401, req.t("middleware.unauthorized"));
+      if (refreshVerification.user.isActive === false) return res.respond(403, req.t("middleware.accountDeactivated"));
       const newAccessToken = accessTokenGenerator({ id: refreshVerification.user.id });
       res.setHeader("x-new-access-token", newAccessToken);
       res.setHeader("x-new-refresh-token", refreshVerification.newRefreshToken);

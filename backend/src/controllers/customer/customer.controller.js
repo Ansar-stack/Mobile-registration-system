@@ -66,7 +66,7 @@ export const createCustomer = asyncHandler(async (req, res) => {
   }
 
   const existing = await db.query.customers.findFirst({ where: (c, { eq: eqFn }) => eqFn(c.idCardNumber, idCardNumber), with: addrWith });
-  if (existing) return res.respond(200, req.t("customer.alreadyExists"), { customer: existing });
+  if (existing) return res.respond(409, req.t("customer.alreadyExists"), { customer: existing });
 
   const [phoneConflict] = await db.select({ id: customers.id }).from(customers).where(eq(customers.phoneNumber, phoneNumber));
   if (phoneConflict) return res.respond(400, req.t("customer.phoneConflict"));

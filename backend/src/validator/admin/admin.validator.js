@@ -10,6 +10,8 @@ export const createUserValidator = [
   body("password").notEmpty().withMessage("validation.passwordRequired").isLength({ min: 8 }).withMessage("validation.passwordMin").trim(),
   body("phone").optional().matches(/^(?:\+93|0093|0)7[0-9]{8}$|^\+93[0-9]{9}$/).withMessage("validation.phoneInvalid"),
   body("shopNumber").optional().isString().withMessage("validation.shopNumberString"),
+  body("idCardNumber").optional().isString().withMessage("validation.idCardNumberString"),
+  body("address").optional().isString().withMessage("validation.addressString"),
   body("role").optional().isIn(["user", "admin"]).withMessage("validation.roleInvalid"),
 ];
 
@@ -19,5 +21,7 @@ export const updateUserValidator = [
   body("password").optional().isLength({ min: 8 }).withMessage("validation.passwordMin").trim(),
   body("phone").optional().matches(/^(?:\+93|0093|0)7[0-9]{8}$|^\+93[0-9]{9}$/).withMessage("validation.phoneInvalid"),
   body("shopNumber").optional().isString().withMessage("validation.shopNumberString"),
+  body("idCardNumber").optional().isString().withMessage("validation.idCardNumberString"),
+  body("address").optional().isString().withMessage("validation.addressString"),
   body("role").optional().isIn(["user", "admin"]).withMessage("validation.roleInvalid"),
 ];

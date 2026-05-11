@@ -1,4 +1,4 @@
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray, or, like } from "drizzle-orm";
 import { asyncHandler } from "../../utils/AsyncHandler.util.js";
 import db from "../../configs/db/db.config.js";
 import { transactions, mobiles } from "../../db/schema.js";
@@ -22,9 +22,7 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
     const matched = await db
       .select({ id: mobiles.id })
       .from(mobiles)
-      .where(and(
-        sql`(${mobiles.imei1} LIKE ${'%' + trimmed + '%'} OR ${mobiles.imei2} LIKE ${'%' + trimmed + '%'})`
-      ));
+      .where(or(like(mobiles.imei1, `%${trimmed}%`), like(mobiles.imei2, `%${trimmed}%`)));
     resolvedMobileIds = matched.map((m) => m.id);
     if (!resolvedMobileIds.length)
       return res.respond(200, req.t("transaction.fetched"), { transactions: [], pagination: { total: 0, page, limit, totalPages: 0 } });

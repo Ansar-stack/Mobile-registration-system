@@ -17,7 +17,10 @@ export const users = sqliteTable("users", {
   password: text("password").notNull(),
   phone: text("phone"),
   shopNumber: text("shop_number"),
+  idCardNumber: text("id_card_number"),
+  address: text("address"),
   role: text("role").notNull().default("user"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   refreshToken: text("refresh_token"),
   ...timestamps,
 });

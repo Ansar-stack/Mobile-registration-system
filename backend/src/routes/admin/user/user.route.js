@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUsers, getUserById, getUserMobiles, getUserCustomers, getUserTransactions, createUser, updateUser, deleteUser } from "../../../controllers/admin/user.controller.js";
+import { getUsers, getUserById, getUserMobiles, getUserCustomers, getUserTransactions, createUser, updateUser, deleteUser, toggleUserActive } from "../../../controllers/admin/user.controller.js";
 import { authorizeRole } from "../../../middlewares/authorizeRole.middleware.js";
 import { requestValidator } from "../../../middlewares/validate.middleware.js";
 import { createUserValidator, updateUserValidator, idParamValidator } from "../../../validator/admin/admin.validator.js";
@@ -16,6 +16,7 @@ router.get("/users/:id/customers",      idParamValidator, requestValidator, getU
 router.get("/users/:id/transactions",   idParamValidator, requestValidator, getUserTransactions);
 router.post("/users",                   createUserValidator, requestValidator, createUser);
 router.patch("/users/:id",              idParamValidator, updateUserValidator, requestValidator, updateUser);
+router.patch("/users/:id/toggle-active", idParamValidator, requestValidator, toggleUserActive);
 router.delete("/users/:id",             idParamValidator, requestValidator, deleteUser);
 
 export default router;
