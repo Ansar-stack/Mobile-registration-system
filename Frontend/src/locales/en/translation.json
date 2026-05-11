@@ -214,7 +214,18 @@
     "deleteConfirm": "Are you sure you want to delete",
     "deleteWarning": "This will also remove all their transactions and customers. This action cannot be undone.",
     "roleFilter": "Role",
-    "shopFilter": "Shop"
+    "shopFilter": "Shop",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activateSuccess": "User activated successfully",
+    "deactivateSuccess": "User deactivated successfully",
+    "viewUser": "User Details",
+    "viewDesc": "Full details of this user.",
+    "idCardLabel": "ID Card No.",
+    "idCardPlaceholder": "e.g. 35202-1234567-1",
+    "addressLabel": "Address",
+    "addressPlaceholder": "e.g. Kandahar, Block 3"
   },
   "mobiles": {
     "title": "Mobiles",
@@ -473,7 +484,10 @@
     "noTransactions": "No transactions found.",
     "noCustomer": "No customer",
     "userNotFound": "User not found",
-    "shopNo": "Shop #"
+    "shopNo": "Shop #",
+    "filterImei": "Filter by IMEI...",
+    "filterBrand": "Filter by brand...",
+    "filterModel": "Filter by model..."
   },
   "entry": {
     "title": "Create Entry",
@@ -557,7 +571,16 @@
     "noRecentEntries": "No recent entries found.",
     "noCustomer": "No customer",
     "priceMin": "Price cannot be negative",
-    "priceMax": "Price seems too high"
+    "priceMax": "Price seems too high",
+    "filterImei": "Search by IMEI...",
+    "filterBrand": "Filter by brand...",
+    "filterType": "Filter by type...",
+    "filterTypeAll": "All types",
+    "applyFilter": "Apply",
+    "clearFilter": "Clear Filter",
+    "imeiFilter": "IMEI",
+    "brandFilter": "Brand",
+    "typeFilter": "Type"
   },
   "detectedStolen": {
     "title": "Detected Stolen Mobiles",

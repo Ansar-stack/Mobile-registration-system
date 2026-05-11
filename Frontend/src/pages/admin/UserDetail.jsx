@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { adminUserService } from '../../services';
 import { SectionLoader } from '../../component/Loader';
 import { Button } from '../../component/ui/button';
+import { Input } from '../../component/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../component/ui/table';
 import TablePagination from '../../component/ui/TablePagination';
-import { ArrowLeft, Smartphone, Users, ArrowLeftRight, ShoppingCart, Tag, Unlock } from 'lucide-react';
+import { ArrowLeft, Smartphone, Users, ArrowLeftRight, ShoppingCart, Tag, Unlock, Search, Filter, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -34,11 +35,15 @@ export default function UserDetail() {
   const [userLoading, setUserLoading] = useState(true);
   const [activeTab,   setActiveTab]   = useState('mobiles');
 
+  const EMPTY_MOB_FILTERS = { q: '', brand: '', model: '', color: '', imei: '' };
   const [mobiles,       setMobiles]       = useState([]);
   const [mobLoading,    setMobLoading]    = useState(false);
   const [mobPage,       setMobPage]       = useState(1);
   const [mobTotal,      setMobTotal]      = useState(0);
   const [mobTotalPages, setMobTotalPages] = useState(1);
+  const [mobDraft,      setMobDraft]      = useState(EMPTY_MOB_FILTERS);
+  const [mobFilters,    setMobFilters]    = useState(EMPTY_MOB_FILTERS);
+  const hasMobFilters = Object.values(mobFilters).some((v) => v !== '');
   const [customers,       setCustomers]     = useState([]);
   const [custLoading,     setCustLoading]   = useState(false);
   const [custPage,        setCustPage]      = useState(1);
@@ -67,10 +72,16 @@ export default function UserDetail() {
     load();
   }, [id]);
 
-  const fetchMobiles = useCallback(async (pg = 1) => {
+  const fetchMobiles = useCallback(async (pg = 1, filters = mobFilters) => {
     setMobLoading(true);
     try {
-      const res = await adminUserService.getUserMobiles(id, { page: pg, limit: LIMIT });
+      const params = { page: pg, limit: LIMIT };
+      if (filters.q)     params.q     = filters.q;
+      if (filters.brand) params.brand = filters.brand;
+      if (filters.model) params.model = filters.model;
+      if (filters.color) params.color = filters.color;
+      if (filters.imei)  params.imei  = filters.imei;
+      const res = await adminUserService.getUserMobiles(id, params);
       const raw = res.data.data;
       setMobiles(raw?.mobiles || []);
       setMobTotal(raw?.pagination?.total || 0);
@@ -101,7 +112,7 @@ export default function UserDetail() {
   }, [id]);
 
   useEffect(() => {
-    fetchMobiles(1);
+    fetchMobiles(1, EMPTY_MOB_FILTERS);
     fetchCustomers(1);
     fetchTransactions(1);
   }, []);
@@ -110,7 +121,7 @@ export default function UserDetail() {
     if (activeTab === 'transactions') fetchTransactions(1, '');
   }, [activeTab]);
 
-  useEffect(() => { fetchMobiles(mobPage); }, [mobPage]);
+  useEffect(() => { fetchMobiles(mobPage, mobFilters); }, [mobPage]);
   useEffect(() => { fetchCustomers(custPage); }, [custPage]);
   useEffect(() => { fetchTransactions(txPage); }, [txPage]);
 
@@ -166,6 +177,37 @@ export default function UserDetail() {
       {/* Mobiles Tab */}
       {activeTab === 'mobiles' && (
         <div className="space-y-4">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder={t('userDetail.searchMobiles')} className="pl-9" value={mobDraft.q}
+                  onChange={(e) => setMobDraft((p) => ({ ...p, q: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && (() => { setMobFilters(mobDraft); setMobPage(1); fetchMobiles(1, mobDraft); })() } />
+              </div>
+              <Input placeholder={t('userDetail.filterImei')} value={mobDraft.imei}
+                onChange={(e) => setMobDraft((p) => ({ ...p, imei: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && (() => { setMobFilters(mobDraft); setMobPage(1); fetchMobiles(1, mobDraft); })()} />
+              <Input placeholder={t('userDetail.filterBrand')} value={mobDraft.brand}
+                onChange={(e) => setMobDraft((p) => ({ ...p, brand: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && (() => { setMobFilters(mobDraft); setMobPage(1); fetchMobiles(1, mobDraft); })()} />
+              <Input placeholder={t('userDetail.filterModel')} value={mobDraft.model}
+                onChange={(e) => setMobDraft((p) => ({ ...p, model: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && (() => { setMobFilters(mobDraft); setMobPage(1); fetchMobiles(1, mobDraft); })()} />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" className="flex items-center gap-2"
+                onClick={() => { setMobFilters(mobDraft); setMobPage(1); fetchMobiles(1, mobDraft); }}>
+                <Filter className="h-3.5 w-3.5" /> {t('users.applyFilters')}
+              </Button>
+              {hasMobFilters && (
+                <Button variant="outline" size="sm" className="flex items-center gap-2"
+                  onClick={() => { setMobDraft(EMPTY_MOB_FILTERS); setMobFilters(EMPTY_MOB_FILTERS); setMobPage(1); fetchMobiles(1, EMPTY_MOB_FILTERS); }}>
+                  <X className="h-3.5 w-3.5" /> {t('users.clear')}
+                </Button>
+              )}
+            </div>
+          </div>
           <div className="border rounded-lg bg-background overflow-x-auto">
             <Table>
               <TableHeader>

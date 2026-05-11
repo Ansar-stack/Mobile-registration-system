@@ -20,35 +20,18 @@ import { toast } from 'sonner';
 
 /* ── Notification type meta ── */
 const NOTIF_META = {
-  STOLEN_MATCH: {
-    icon: ShieldAlert,
-    iconCls: 'text-red-500',
-    cardCls: 'border-red-200 bg-red-50/40',
-    badgeCls: 'bg-red-100 text-red-700',
-    label: 'Stolen Match',
-  },
-  DUPLICATE_IMEI: {
-    icon: Copy,
-    iconCls: 'text-orange-500',
-    cardCls: 'border-orange-200 bg-orange-50/40',
-    badgeCls: 'bg-orange-100 text-orange-700',
-    label: 'Duplicate IMEI',
-  },
-  MOBILE_REGISTERED: {
-    icon: Smartphone,
-    iconCls: 'text-blue-500',
-    cardCls: 'border-blue-200 bg-blue-50/40',
-    badgeCls: 'bg-blue-100 text-blue-700',
-    label: 'Mobile Registered',
-  },
+  STOLEN_MATCH:      { icon: ShieldAlert, iconCls: 'text-red-500',    cardCls: 'border-red-200 bg-red-50/40',      badgeCls: 'bg-red-100 text-red-700',      labelKey: 'notifications.stolenMatch'      },
+  DUPLICATE_IMEI:    { icon: Copy,        iconCls: 'text-orange-500',  cardCls: 'border-orange-200 bg-orange-50/40', badgeCls: 'bg-orange-100 text-orange-700', labelKey: 'notifications.duplicateImei'    },
+  MOBILE_REGISTERED: { icon: Smartphone,  iconCls: 'text-blue-500',    cardCls: 'border-blue-200 bg-blue-50/40',    badgeCls: 'bg-blue-100 text-blue-700',    labelKey: 'notifications.mobileRegistered' },
 };
 const getMeta = (type) =>
-  NOTIF_META[type] || { icon: Bell, iconCls: 'text-muted-foreground', cardCls: '', badgeCls: 'bg-muted', label: type };
+  NOTIF_META[type] || { icon: Bell, iconCls: 'text-muted-foreground', cardCls: '', badgeCls: 'bg-muted', labelKey: null };
 
 /* ── Notification detail modal ── */
-function NotificationModal({ notif, open, onClose }) {
+function NotificationModal({ notif, open, onClose, onDownloadPdf, t }) {
   if (!notif) return null;
   const meta = getMeta(notif.type);
+  const label = meta.labelKey ? t(meta.labelKey) : notif.type;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -59,11 +42,11 @@ function NotificationModal({ notif, open, onClose }) {
           </div>
           <div className="min-w-0 flex-1">
             <DialogTitle className="text-base font-bold leading-tight">
-              Notification Details
+              {t('notifications.notifDetails')}
             </DialogTitle>
             <DialogDescription className="text-xs mt-0.5">
               <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold uppercase mr-1.5', meta.badgeCls)}>
-                {meta.label}
+                {label}
               </span>
               {notif.createdAt ? format(new Date(notif.createdAt), 'MMM dd, yyyy · HH:mm') : '—'}
             </DialogDescription>
@@ -72,27 +55,27 @@ function NotificationModal({ notif, open, onClose }) {
 
         <div className="px-6 py-5 space-y-4">
           <div>
-            <p className="text-[10px] text-muted-foreground mb-0.5">Message</p>
+            <p className="text-[10px] text-muted-foreground mb-0.5">{t('notifications.message')}</p>
             <p className="text-sm">{notif.message}</p>
           </div>
           {notif.imei && (
             <div>
-              <p className="text-[10px] text-muted-foreground mb-0.5">IMEI</p>
+              <p className="text-[10px] text-muted-foreground mb-0.5">{t('notifications.imei')}</p>
               <p className="text-sm font-mono tracking-wide">{notif.imei}</p>
             </div>
           )}
           {notif.mobile && (
             <>
               <div className="border-t" />
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Mobile Details</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t('notifications.mobileDetails')}</p>
               <div className="grid grid-cols-2 gap-x-8 gap-y-3">
                 {[
-                  { label: 'Brand', value: notif.mobile.brand },
-                  { label: 'Model', value: notif.mobile.model },
-                  { label: 'IMEI 1', value: notif.mobile.imei1, mono: true },
-                  { label: 'IMEI 2', value: notif.mobile.imei2, mono: true },
-                  { label: 'Color', value: notif.mobile.color },
-                  { label: 'RAM / Storage', value: notif.mobile.ram ? `${notif.mobile.ram}GB / ${notif.mobile.storage}GB` : null },
+                  { label: t('notifications.brand'),      value: notif.mobile.brand },
+                  { label: t('notifications.model'),      value: notif.mobile.model },
+                  { label: t('notifications.imei1'),      value: notif.mobile.imei1, mono: true },
+                  { label: t('notifications.imei2'),      value: notif.mobile.imei2, mono: true },
+                  { label: t('notifications.color'),      value: notif.mobile.color },
+                  { label: t('notifications.ramStorage'), value: notif.mobile.ram ? `${notif.mobile.ram}GB / ${notif.mobile.storage}GB` : null },
                 ].map(({ label, value, mono }) => value ? (
                   <div key={label}>
                     <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
@@ -105,12 +88,12 @@ function NotificationModal({ notif, open, onClose }) {
           {notif.registeredBy && (
             <>
               <div className="border-t" />
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Registered By</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t('notifications.registeredBy')}</p>
               <div className="grid grid-cols-2 gap-x-8 gap-y-3">
                 {[
-                  { label: 'Name', value: notif.registeredBy.name },
-                  { label: 'Email', value: notif.registeredBy.email },
-                  { label: 'Shop No.', value: notif.registeredBy.shopNumber },
+                  { label: t('notifications.name'),   value: notif.registeredBy.name },
+                  { label: t('notifications.email'),  value: notif.registeredBy.email },
+                  { label: t('notifications.shopNo'), value: notif.registeredBy.shopNumber },
                 ].map(({ label, value }) => value ? (
                   <div key={label}>
                     <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
@@ -122,8 +105,12 @@ function NotificationModal({ notif, open, onClose }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t shrink-0 flex justify-end">
-          <Button variant="outline" onClick={onClose}>Close</Button>
+        <div className="px-6 py-4 border-t shrink-0 flex justify-between items-center">
+          <Button variant="outline" size="sm" className="flex items-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+            onClick={() => { onDownloadPdf(notif.id); onClose(); }}>
+            <FileDown className="h-4 w-4" /> {t('notifications.downloadPdf')}
+          </Button>
+          <Button variant="outline" onClick={onClose}>{t('common.close')}</Button>
         </div>
       </DialogContent>
     </Dialog>

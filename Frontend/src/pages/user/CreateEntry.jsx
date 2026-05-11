@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { mobileService, customerService, transactionService } from '../../services';
 import { Button } from '../../component/ui/button';
@@ -7,7 +7,7 @@ import { Label } from '../../component/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../component/ui/select';
 import { Textarea } from '../../component/ui/texterea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../component/ui/table';
-import { Loader2, Smartphone, ArrowLeftRight, Users, Check, ChevronRight, ChevronLeft, ShoppingCart, Tag, Unlock } from 'lucide-react';
+import { Loader2, Smartphone, ArrowLeftRight, Users, Check, ChevronRight, ChevronLeft, ShoppingCart, Tag, Unlock, Search, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { ProvinceInput, DistrictInput } from '../../component/ui/ProvinceInput';
@@ -387,12 +387,21 @@ export default function CreateEntry() {
   const [recentEntries, setRecentEntries] = useState([]);
   const [isFetchingEntries, setIsFetchingEntries] = useState(false);
 
+  const EMPTY_FILTERS = { q: '', brand: '', type: '' };
+  const [draft, setDraft] = useState(EMPTY_FILTERS);
+  const [applied, setApplied] = useState(EMPTY_FILTERS);
+  const hasActiveFilters = useMemo(() => Object.values(applied).some((v) => v !== ''), [applied]);
+
   const form = useForm({ defaultValues: { transactionType: 'BUY', gender: 'male' } });
 
-  const fetchRecentEntries = async () => {
+  const fetchRecentEntries = async (filters = applied) => {
     setIsFetchingEntries(true);
     try {
-      const res = await transactionService.getAll({ limit: 5, sort: 'createdAt:desc' });
+      const params = { limit: 10, sort: 'createdAt:desc' };
+      if (filters.q)     params.q     = filters.q;
+      if (filters.brand) params.brand = filters.brand;
+      if (filters.type)  params.type  = filters.type;
+      const res = await transactionService.getAll(params);
       const raw = res?.data?.data;
       setRecentEntries(Array.isArray(raw?.transactions) ? raw.transactions : Array.isArray(raw?.items) ? raw.items : []);
     } catch {
@@ -402,9 +411,12 @@ export default function CreateEntry() {
     }
   };
 
+  const applyFilters = () => { setApplied(draft); fetchRecentEntries(draft); };
+  const clearFilters = () => { setDraft(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); fetchRecentEntries(EMPTY_FILTERS); };
+
   useEffect(() => {
     fetchRecentEntries();
-    const id = setInterval(fetchRecentEntries, 60000);
+    const id = setInterval(() => fetchRecentEntries(applied), 60000);
     return () => clearInterval(id);
   }, []);
 
@@ -478,6 +490,52 @@ export default function CreateEntry() {
 
       <div className="space-y-4">
         <h3 className="text-xl font-bold tracking-tight">{t('entry.recentEntries')}</h3>
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t('entry.filterImei')}
+                className="pl-9"
+                value={draft.q}
+                onChange={(e) => setDraft((p) => ({ ...p, q: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+              />
+            </div>
+            <Input
+              placeholder={t('entry.filterBrand')}
+              value={draft.brand}
+              onChange={(e) => setDraft((p) => ({ ...p, brand: e.target.value }))}
+              onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+            />
+            <Select value={draft.type} onValueChange={(v) => setDraft((p) => ({ ...p, type: v === 'ALL' ? '' : v }))}>
+              <SelectTrigger><SelectValue placeholder={t('entry.filterType')} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t('entry.filterTypeAll')}</SelectItem>
+                <SelectItem value="BUY">{t('entry.buy')}</SelectItem>
+                <SelectItem value="SELL">{t('entry.sell')}</SelectItem>
+                <SelectItem value="UNLOCK">{t('entry.unlock')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button onClick={applyFilters} size="sm" className="gap-1.5">
+              <Filter className="h-3.5 w-3.5" /> {t('entry.applyFilter')}
+            </Button>
+            {hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5">
+                <X className="h-3.5 w-3.5" /> {t('entry.clearFilter')}
+              </Button>
+            )}
+            {hasActiveFilters && (
+              <span className="text-xs text-muted-foreground">
+                {[applied.q && `${t('entry.imeiFilter')}: "${applied.q}"`, applied.brand && `${t('entry.brandFilter')}: "${applied.brand}"`, applied.type && `${t('entry.typeFilter')}: ${applied.type}`].filter(Boolean).join(' · ')}
+              </span>
+            )}
+          </div>
+        </div>
+
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
@@ -526,6 +584,7 @@ export default function CreateEntry() {
               ))}
             </TableBody>
           </Table>
+        </div>
         </div>
       </div>
     </div>

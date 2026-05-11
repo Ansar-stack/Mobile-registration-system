@@ -63,6 +63,7 @@ export const adminUserService = {
   getUserTransactions: (id, params) => api.get(`/api/v1/admin/user/users/${id}/transactions`, { params }),
   create: (data) => api.post('/api/v1/admin/user/users', data),
   update: (id, data) => api.patch(`/api/v1/admin/user/users/${id}`, data),
+  toggleActive: (id) => api.patch(`/api/v1/admin/user/users/${id}/toggle-active`),
   delete: (id) => api.delete(`/api/v1/admin/user/users/${id}`),
 };
 

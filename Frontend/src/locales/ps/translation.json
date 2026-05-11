@@ -185,7 +185,16 @@
     "noRecentEntries": "هیڅ ثبت نشته",
     "noCustomer": "پیرودونکی نشته",
     "priceMin": "بیه منفي نشي",
-    "priceMax": "بیه به لوړه بریېسیچې"
+    "priceMax": "بیه به لوړه بریېسیچې",
+    "filterImei": "IMEI لټون...",
+    "filterBrand": "برانډ فلټر...",
+    "filterType": "ډول فلټر...",
+    "filterTypeAll": "ټول ډولونه",
+    "applyFilter": "تطبیق",
+    "clearFilter": "پاک کړه",
+    "imeiFilter": "IMEI",
+    "brandFilter": "برانډ",
+    "typeFilter": "ډول"
   },
   "transactions": {
     "title": "سوداوي",
@@ -237,7 +246,10 @@
     "noTransactions": "هیڅ سودا نشته",
     "noCustomer": "پیرودونکی نشته",
     "userNotFound": "کاروونکی پیدا نشو",
-    "shopNo": "دوکان #"
+    "shopNo": "دوکان #",
+    "filterImei": "IMEI فلټر...",
+    "filterBrand": "برانډ فلټر...",
+    "filterModel": "ماډل فلټر..."
   },
 
   "stolen": {
@@ -504,7 +516,18 @@
     "deleteConfirm": "ډاډه یې؟",
     "deleteWarning": "ټول معلومات حذف کېږي",
     "roleFilter": "رول",
-    "shopFilter": "دوکان"
+    "shopFilter": "دوکان",
+    "status": "حالت",
+    "active": "فعال",
+    "inactive": "غیر فعال",
+    "activateSuccess": "کاروونکی فعال شو",
+    "deactivateSuccess": "کاروونکی غیر فعال شو",
+    "viewUser": "د کاروونکی تفصیل",
+    "viewDesc": "د کاروونکی بشپړ تفصیل.",
+    "idCardLabel": "د تذکرے شمیره",
+    "idCardPlaceholder": "بېلګه: 35202-1234567-1",
+    "addressLabel": "پته",
+    "addressPlaceholder": "بېلګه: کندهار"
   },
 
   "detectedStolen": {
