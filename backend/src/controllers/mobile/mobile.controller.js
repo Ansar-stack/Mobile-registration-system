@@ -3,7 +3,7 @@ import { asyncHandler } from "../../utils/AsyncHandler.util.js";
 import db from "../../configs/db/db.config.js";
 import { mobiles, transactions, stolenMobiles, notifications, customers } from "../../db/schema.js";
 
-const triggerNotifications = async (imei1, imei2, newMobileId, userId) => {
+const triggerNotifications = async (imei1, imei2, newMobileId, userId, transactionType, customerPhone, transactionId) => {
   const imeiOr = [eq(stolenMobiles.imei1, imei1), ...(imei2 ? [eq(stolenMobiles.imei2, imei2), eq(stolenMobiles.imei1, imei2)] : [])];
   const dupeOr = [
     eq(mobiles.imei1, imei1),
@@ -18,7 +18,11 @@ const triggerNotifications = async (imei1, imei2, newMobileId, userId) => {
   const inserts = [];
   if (stolenMatch) inserts.push({ type: "STOLEN_MATCH", imei: imei1, mobileId: newMobileId, userId, message: `Registered mobile IMEI ${imei1} matches a stolen mobile entry` });
   if (dupeRows.length) inserts.push({ type: "DUPLICATE_IMEI", imei: imei1, mobileId: newMobileId, userId, message: `Duplicate IMEI detected: ${imei1} was registered again — ${dupeRows.length + 1} entries now exist` });
-  inserts.push({ type: "MOBILE_REGISTERED", imei: imei1, mobileId: newMobileId, userId, message: `A new mobile with IMEI ${imei1} was registered by user ID ${userId}` });
+  
+  const txTypeLabel = transactionType === "UNLOCK" ? "Screen Unlock" : transactionType;
+  const phoneInfo = customerPhone ? ` — Customer Phone: ${customerPhone}` : "";
+  inserts.push({ type: "MOBILE_REGISTERED", imei: imei1, mobileId: newMobileId, userId, message: `New ${txTypeLabel} transaction for IMEI ${imei1} by user ID ${userId}${phoneInfo}` });
+  
   if (inserts.length) await db.insert(notifications).values(inserts);
 };
 
@@ -113,15 +117,17 @@ export const createMobile = asyncHandler(async (req, res) => {
   if ((type === "BUY" || type === "UNLOCK") && !resolvedCustomerId)
     return res.respond(400, req.t("mobile.customerRequired"));
 
+  let customerPhone = null;
   if (resolvedCustomerId) {
-    const [customerCheck] = await db.select({ id: customers.id }).from(customers).where(eq(customers.id, resolvedCustomerId)).limit(1);
+    const [customerCheck] = await db.select({ id: customers.id, phoneNumber: customers.phoneNumber }).from(customers).where(eq(customers.id, resolvedCustomerId)).limit(1);
     if (!customerCheck) return res.respond(404, req.t("mobile.customerNotFound"));
+    customerPhone = customerCheck.phoneNumber;
   }
 
   const [mobile] = await db.insert(mobiles).values({ imei1, imei2, brand, model, color, ram, storage }).returning({ id: mobiles.id });
-  await db.insert(transactions).values({ type, price: price || null, notes: notes || null, customerId: resolvedCustomerId, mobileId: mobile.id, userId: req.user.id });
+  const [transaction] = await db.insert(transactions).values({ type, price: price || null, notes: notes || null, customerId: resolvedCustomerId, mobileId: mobile.id, userId: req.user.id }).returning({ id: transactions.id });
 
-  triggerNotifications(imei1, imei2, mobile.id, req.user.id).catch(() => {});
+  triggerNotifications(imei1, imei2, mobile.id, req.user.id, type, customerPhone, transaction.id).catch(() => {});
 
   const result = await db.query.mobiles.findFirst({
     where: (m, { eq: eqFn }) => eqFn(m.id, mobile.id),

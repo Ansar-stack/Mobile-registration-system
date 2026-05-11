@@ -118,7 +118,7 @@ export const downloadNotificationPdf = asyncHandler(async (req, res) => {
   const [notif] = await db.select().from(notifications).where(eq(notifications.id, id));
   if (!notif) return res.respond(404, req.t("notification.notFound"));
 
-  // Fetch full mobile with transactions, customer, addresses, user
+  // Fetch full mobile with all transactions, customer, addresses, user
   const mobile = notif.mobileId ? await db.query.mobiles.findFirst({
     where: (m, { eq: eqFn }) => eqFn(m.id, notif.mobileId),
     with: {
@@ -126,17 +126,18 @@ export const downloadNotificationPdf = asyncHandler(async (req, res) => {
         orderBy: (tx, { desc }) => [desc(tx.createdAt)],
         with: {
           user: { columns: { id: true, name: true, email: true, phone: true, shopNumber: true } },
-          customer: {
-            with: { addresses: true },
-          },
+          customer: { with: { addresses: true } },
         },
       },
     },
   }) : null;
 
-  const tx         = mobile?.transactions?.[0] ?? null;
-  const customer   = tx?.customer ?? null;
-  const registeredBy = tx?.user ?? null;
+  // Use the transaction linked to the notification's userId for context, fallback to latest
+  const tx = mobile?.transactions?.find(t => t.userId === notif.userId)
+    ?? mobile?.transactions?.[0]
+    ?? null;
+  const customer    = tx?.customer    ?? null;
+  const registeredBy = tx?.user       ?? null;
 
   // Download ID image if exists
   let idImageBuffer = null;
@@ -173,8 +174,13 @@ export const downloadNotificationPdf = asyncHandler(async (req, res) => {
   doc.rect(0, 0, doc.page.width, 90).fill(primaryColor);
   doc.fillColor("white").fontSize(20).font("Helvetica-Bold")
      .text("Kandahar Mobile Registration System", LEFT, 22, { width: doc.page.width - 100, align: "center" });
+  const headerSubtitle = notif.type === "MOBILE_REGISTERED"
+    ? `Mobile Registration Certificate — ${tx?.type === "UNLOCK" ? "Screen Unlock" : tx?.type === "BUY" ? "Buy" : tx?.type === "SELL" ? "Sell" : "Transaction"}`
+    : notif.type === "STOLEN_MATCH" ? "Stolen Mobile Match Alert"
+    : notif.type === "DUPLICATE_IMEI" ? "Duplicate IMEI Alert"
+    : "Notification Report";
   doc.fillColor("white").fontSize(10).font("Helvetica")
-     .text("Official Mobile Registration Certificate", LEFT, 50, { width: doc.page.width - 100, align: "center" });
+     .text(headerSubtitle, LEFT, 50, { width: doc.page.width - 100, align: "center" });
 
   doc.y = 105;
 
@@ -182,6 +188,20 @@ export const downloadNotificationPdf = asyncHandler(async (req, res) => {
   doc.fillColor(mutedText).fontSize(9).font("Helvetica")
      .text(`Generated: ${new Date().toLocaleString()}`, LEFT, doc.y, { width: W, align: "right" });
   doc.moveDown(0.8);
+
+  // ── Alert Banner (for STOLEN_MATCH / DUPLICATE_IMEI) ──
+  if (notif.type === "STOLEN_MATCH" || notif.type === "DUPLICATE_IMEI") {
+    const alertColor = notif.type === "STOLEN_MATCH" ? "#dc2626" : "#d97706";
+    const alertBg    = notif.type === "STOLEN_MATCH" ? "#fef2f2" : "#fffbeb";
+    const alertLabel = notif.type === "STOLEN_MATCH" ? "STOLEN MOBILE MATCH" : "DUPLICATE IMEI DETECTED";
+    const ay = doc.y;
+    doc.rect(LEFT, ay, W, 28).fill(alertBg);
+    doc.rect(LEFT, ay, 4, 28).fill(alertColor);
+    doc.fillColor(alertColor).fontSize(10).font("Helvetica-Bold")
+       .text(`⚠  ${alertLabel}`, LEFT + 12, ay + 9, { width: W - 20 });
+    doc.y = ay + 34;
+    doc.moveDown(0.3);
+  }
 
   const sectionTitle = (title) => {
     doc.moveDown(0.5);
@@ -224,8 +244,8 @@ export const downloadNotificationPdf = asyncHandler(async (req, res) => {
   if (tx) {
     rowToggle = false;
     sectionTitle("Transaction Details");
-    row("Type",  tx.type === "UNLOCK" ? "Screen Unlock" : tx.type);
-    row("Price", tx.price ? `$${tx.price}` : null);
+    row("Type",  tx.type === "UNLOCK" ? "Screen Unlock" : tx.type === "BUY" ? "Buy" : "Sell");
+    row("Price", tx.price != null ? `$${tx.price}` : null);
     row("Notes", tx.notes);
     row("Date",  tx.createdAt ? new Date(tx.createdAt).toLocaleString() : null);
   }
@@ -255,6 +275,11 @@ export const downloadNotificationPdf = asyncHandler(async (req, res) => {
         if (addrVal) row(`${addr.type} Address`, addrVal);
       });
     }
+  } else if (tx) {
+    // No customer linked — still show a section so admin knows
+    rowToggle = false;
+    sectionTitle("Customer Information");
+    row("Customer", "No customer linked to this transaction");
   }
 
   // ── ID Card Image ──
