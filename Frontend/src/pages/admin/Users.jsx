@@ -46,9 +46,7 @@ const Users = () => {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
-  // Determine if current user is primary admin (lowest id among admins / seeded admin)
-  // We check by comparing with the first user returned — backend enforces the real check
-  const isPrimaryAdmin = currentUser?.role === 'admin';
+  const isPrimaryAdmin = currentUser?.isPrimaryAdmin === true;
 
   const fetchUsers = useCallback(async (filters = applied, currentPage = page) => {
     setIsLoading(true);

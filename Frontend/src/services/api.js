@@ -37,6 +37,16 @@ api.interceptors.response.use(
       window.location.href = '/login';
     }
 
+    if (status === 403) {
+      const data = error.response?.data;
+      // Only force logout if the account is deactivated (not a regular forbidden)
+      if (data?.message?.toLowerCase().includes('deactivated') || data?.message?.toLowerCase().includes('غیر فعال')) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
+      }
+    }
+
     error.message = message;
     return Promise.reject(error);
   }

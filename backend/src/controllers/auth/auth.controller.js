@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { asyncHandler } from "../../utils/AsyncHandler.util.js";
 import { accessTokenGenerator, refreshTokenGenerator } from "../../utils/genToken.util.js";
 import { comparePassword, hashPassword } from "../../utils/hash.util.js";
@@ -56,7 +56,17 @@ export const verify = asyncHandler(async (req, res) => {
     .from(users)
     .where(eq(users.id, req.user.id));
   if (!user) return res.respond(404, req.t("auth.userNotFoundById"));
-  res.respond(200, req.t("auth.verified"), { user });
+
+  const seededAdminEmail = process.env.SEEDED_ADMIN_EMAIL;
+  let isPrimaryAdmin = false;
+  if (seededAdminEmail) {
+    isPrimaryAdmin = user.email === seededAdminEmail;
+  } else {
+    const [first] = await db.select({ id: users.id }).from(users).orderBy(sql`${users.id} asc`).limit(1);
+    isPrimaryAdmin = first?.id === user.id;
+  }
+
+  res.respond(200, req.t("auth.verified"), { user: { ...user, isPrimaryAdmin } });
 });
 
 // Forgot Password
