@@ -15,6 +15,27 @@ import { sql } from 'drizzle-orm';
 
 const app = express();
 
+// Request timeout middleware - prevent hanging requests
+app.use((req, res, next) => {
+  // Set timeout for each request (2 minutes)
+  req.setTimeout(120000, () => {
+    logger.warn(`Request timeout: ${req.method} ${req.originalUrl}`);
+    if (!res.headersSent) {
+      res.status(408).json({
+        success: false,
+        status: 408,
+        message: 'Request timeout'
+      });
+    }
+  });
+  
+  res.setTimeout(120000, () => {
+    logger.warn(`Response timeout: ${req.method} ${req.originalUrl}`);
+  });
+  
+  next();
+});
+
 // HTTP request logging via morgan → winston
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', { stream: morganStream }));
 
@@ -48,7 +69,11 @@ const corsOptions = {
         // Allow requests with no origin (Postman, mobile apps, server-to-server)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error('Not allowed by CORS'));
+        
+        // Instead of throwing error, just deny with false
+        // This prevents crashes and allows proper error handling
+        logger.warn(`CORS rejected origin: ${origin}`);
+        return callback(null, false);
     },
     methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
     credentials: true,
@@ -57,6 +82,20 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Handle CORS errors gracefully
+app.use((err, req, res, next) => {
+    if (err.message === 'Not allowed by CORS') {
+        logger.warn(`CORS Error: ${req.method} ${req.originalUrl} from origin ${req.headers.origin}`);
+        return res.status(403).json({
+            success: false,
+            status: 403,
+            message: 'Origin not allowed by CORS policy'
+        });
+    }
+    next(err);
+});
+
 app.options('/{*path}', cors(corsOptions));
 
 // configure the hpp middleware to prevent HTTP Parameter Pollution
@@ -101,7 +140,26 @@ app.use((req, res) => {
     res.respond(404, req.t("middleware.routeNotFound"));
 });
 
-// Error Middelware
+// Error Middleware
 app.use(ErrorMiddlware);
+
+// Final catch-all error handler - prevent server crashes
+app.use((err, req, res, next) => {
+  logger.error(`Unhandled error in final middleware: ${err.stack || err.message}`);
+  
+  // If headers already sent, delegate to default error handler
+  if (res.headersSent) {
+    return;
+  }
+  
+  // Send a safe response
+  res.status(500).json({
+    success: false,
+    status: 500,
+    message: process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : err.message || 'Internal server error'
+  });
+});
 
 export default app
