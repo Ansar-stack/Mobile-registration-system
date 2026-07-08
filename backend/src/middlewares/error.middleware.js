@@ -20,16 +20,21 @@ export const ErrorMiddlware = async (err, req, res, next) => {
 
   const statusCode = err.statusCode || err.status || 500;
   
-  // Log error with more context
+  // Log error with full context
   logger.error(`${req.method} ${req.originalUrl} - ${statusCode} - ${err.stack || err.message}`, {
     method: req.method,
     url: req.originalUrl,
     statusCode,
     origin: req.headers.origin,
-    userAgent: req.headers['user-agent']
+    userAgent: req.headers['user-agent'],
+    body: req.body,
+    query: req.query,
+    params: req.params,
+    errorStack: err.stack
   });
 
   // In production, don't expose internal error details
+  // In development, show the actual error message to help debugging
   if (process.env.NODE_ENV === 'production' && statusCode === 500) {
     message = "Something went wrong";
   }
@@ -42,7 +47,8 @@ export const ErrorMiddlware = async (err, req, res, next) => {
     return res.status(statusCode).json({
       success: false,
       status: statusCode,
-      message
+      message,
+      ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
     });
   }
 };

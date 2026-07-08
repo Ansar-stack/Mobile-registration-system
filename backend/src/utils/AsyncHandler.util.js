@@ -7,13 +7,20 @@ export const asyncHandler = (fn) => async (req, res, next) => {
   } catch (error) {
     // Prevent crashes by ensuring we always pass to error handler
     const status = error.status || error.statusCode || 500;
+    
+    // Log the FULL error details including stack trace
     logger.error(`[asyncHandler] ${req.method} ${req.originalUrl} - ${status} - ${error.message}`, {
       stack: error.stack,
       method: req.method,
-      url: req.originalUrl
+      url: req.originalUrl,
+      body: req.body,
+      query: req.query,
+      params: req.params,
+      errorDetails: error
     });
     
-    const message = status < 500 ? error.message : "Something went wrong";
+    // Pass the actual error message for debugging (will be filtered in production by error middleware)
+    const message = error.message || "Something went wrong";
     
     // Ensure we don't try to respond if headers already sent
     if (res.headersSent) {
